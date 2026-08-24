@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activar cuenta — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="auth-shell">
+        <div class="auth-marca">
+            <div class="auth-marca-contenido">
+                <img src="../css/logo.png" alt="SoporteNet" class="auth-logo">
+                <p class="auth-categoria">Soporte Técnico · Internet ISP</p>
+                <h2>SoporteNet</h2>
+                <p>Ya casi. Define tu contraseña y empieza a usar el sistema de soporte de tu ISP.</p>
+            </div>
+        </div>
+
+        <div class="auth-formulario">
+            <div class="tarjeta tarjeta-login">
+                <h1>Activar cuenta</h1>
+                <p class="subtitulo">Pega el token que te dio el Superusuario y elige tu contraseña</p>
+
+                <div id="mensaje-error" class="mensaje-error oculto"></div>
+                <div id="mensaje-exito" class="mensaje-info oculto"></div>
+
+                <form id="form-activar">
+                    <div class="campo">
+                        <label for="token">Token de invitación</label>
+                        <input type="text" id="token" required>
+                    </div>
+                    <div class="campo">
+                        <label for="contrasena">Nueva contraseña (mínimo 8 caracteres)</label>
+                        <div class="campo-con-icono">
+                            <input type="password" id="contrasena" required minlength="8">
+                            <button type="button" class="alternar-contrasena" data-target="contrasena" aria-label="Mostrar contraseña"></button>
+                        </div>
+                    </div>
+                    <div class="campo">
+                        <label for="confirmar">Confirmar contraseña</label>
+                        <div class="campo-con-icono">
+                            <input type="password" id="confirmar" required minlength="8">
+                            <button type="button" class="alternar-contrasena" data-target="confirmar" aria-label="Mostrar contraseña"></button>
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-activar" style="width: 100%; justify-content: center;">Activar cuenta</button>
+                </form>
+
+                <p style="text-align: center; margin-bottom: 0; margin-top: 18px; font-size: 0.85rem; color: var(--color-texto-suave);">
+                    <a href="login.html">Volver a iniciar sesión</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/activar.js"></script>
+</body>
+</html>

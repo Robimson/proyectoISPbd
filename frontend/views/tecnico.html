@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis tareas — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <span class="sidebar-rol">Técnico</span>
+            <nav class="sidebar-nav">
+                <a href="#resumen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Resumen
+                </a>
+                <a href="#mis-tareas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1M9 13l2 2 4-4"/></svg>
+                    Mis tareas
+                </a>
+            </nav>
+            <div class="sidebar-pie">
+                <span class="id-usuario" id="texto-usuario"></span>
+                <button class="secundario" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+                <button class="secundario" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <main class="contenido-principal">
+            <h1>Mis tareas</h1>
+
+            <div class="seccion" id="resumen">
+                <div class="fila-metricas" id="fila-metricas"></div>
+            </div>
+
+            <div class="tarjeta oculto" id="panel-reportar">
+                <h2>Reportar solución — solicitud <span id="id-solicitud-reportar"></span></h2>
+                <div id="mensaje-error-reportar" class="mensaje-error oculto"></div>
+                <form id="form-reportar">
+                    <div class="campo">
+                        <label for="detalle-reporte">¿Qué se hizo para resolverlo?</label>
+                        <textarea id="detalle-reporte" required placeholder="Describe la solución aplicada..."></textarea>
+                    </div>
+                    <button type="submit" id="btn-enviar-reporte">Enviar reporte</button>
+                    <button type="button" class="secundario" id="btn-cancelar-reporte">Cancelar</button>
+                </form>
+            </div>
+
+            <div class="tarjeta oculto" id="panel-adjuntos">
+                <h2>Adjuntos — solicitud <span id="id-solicitud-adjuntos"></span></h2>
+                <p class="subtitulo" style="margin-top: -6px;">Imágenes o PDF, máximo 10MB, hasta 5 archivos por solicitud.</p>
+                <div id="mensaje-error-adjuntos" class="mensaje-error oculto"></div>
+                <div id="lista-adjuntos"></div>
+                <form id="form-adjuntos" style="margin-top: 16px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="campo" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                        <label for="archivo-adjunto">Agregar archivo</label>
+                        <input type="file" id="archivo-adjunto" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                    </div>
+                    <button type="submit" id="btn-subir-adjunto">Subir</button>
+                    <button type="button" class="secundario" id="btn-cerrar-adjuntos">Cerrar</button>
+                </form>
+            </div>
+
+            <div class="seccion" id="mis-tareas">
+                <div id="mensaje-error-lista" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla"></div>
+                <div class="paginacion" id="paginacion"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/tecnico.js"></script>
+</body>
+</html>

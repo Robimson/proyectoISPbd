@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de administración — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <span class="sidebar-rol">Administrador</span>
+            <nav class="sidebar-nav">
+                <a href="#resumen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Resumen
+                </a>
+                <a href="#solicitudes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                    Solicitudes
+                </a>
+                <a href="#reportes-pendientes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h8l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 13h6M9 17h6M14 2v4h4"/></svg>
+                    Reportes pendientes
+                </a>
+                <a href="#clientes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 016-6h2a6 6 0 016 6v1"/><circle cx="17" cy="9" r="3"/><path d="M22 21v-1a5 5 0 00-3-4.6"/></svg>
+                    Clientes
+                </a>
+            </nav>
+            <div class="sidebar-pie">
+                <span class="id-usuario" id="texto-usuario"></span>
+                <button class="secundario" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+                <button class="secundario" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <main class="contenido-principal">
+            <h1>Panel de administración</h1>
+
+            <div class="seccion" id="resumen">
+                <div class="fila-metricas" id="fila-metricas"></div>
+            </div>
+
+            <div class="tarjeta oculto" id="panel-asignar">
+                <h2>Asignar solicitud <span id="id-solicitud-asignar"></span></h2>
+                <div id="mensaje-error-asignar" class="mensaje-error oculto"></div>
+                <form id="form-asignar">
+                    <div class="campo">
+                        <label>Asignar a</label>
+                        <label style="font-weight: normal; display: inline-block; margin-right: 16px;">
+                            <input type="radio" name="tipo-destino" value="tecnico" checked> Técnico
+                        </label>
+                        <label style="font-weight: normal; display: inline-block;">
+                            <input type="radio" name="tipo-destino" value="grupo"> Grupo técnico
+                        </label>
+                    </div>
+                    <div class="campo" id="campo-tecnico">
+                        <label for="select-tecnico">Técnico</label>
+                        <select id="select-tecnico"></select>
+                    </div>
+                    <div class="campo oculto" id="campo-grupo">
+                        <label for="select-grupo">Grupo técnico</label>
+                        <select id="select-grupo"></select>
+                    </div>
+                    <div class="campo" style="max-width: 240px;">
+                        <label for="select-prioridad">Prioridad (opcional)</label>
+                        <select id="select-prioridad">
+                            <option value="">Sin cambiar</option>
+                        </select>
+                    </div>
+                    <div class="campo">
+                        <label for="motivo-reasignacion">Motivo (solo si ya tenía asignación previa)</label>
+                        <input type="text" id="motivo-reasignacion" placeholder="Opcional">
+                    </div>
+                    <button type="submit" id="btn-confirmar-asignar">Asignar</button>
+                    <button type="button" class="secundario" id="btn-cancelar-asignar">Cancelar</button>
+                </form>
+            </div>
+
+            <div class="tarjeta oculto" id="panel-rechazar">
+                <h2>Rechazar reporte <span id="id-reporte-rechazar"></span></h2>
+                <div id="mensaje-error-rechazar" class="mensaje-error oculto"></div>
+                <form id="form-rechazar">
+                    <div class="campo">
+                        <label for="comentario-rechazo">Motivo del rechazo</label>
+                        <textarea id="comentario-rechazo" required placeholder="¿Qué le falta al reporte?"></textarea>
+                    </div>
+                    <button type="submit" id="btn-confirmar-rechazar" class="peligro">Rechazar reporte</button>
+                    <button type="button" class="secundario" id="btn-cancelar-rechazar">Cancelar</button>
+                </form>
+            </div>
+
+            <div class="seccion" id="solicitudes">
+                <h2>Solicitudes</h2>
+                <div class="fila-filtros">
+                    <div class="campo">
+                        <label for="filtro-estado">Filtrar por estado</label>
+                        <select id="filtro-estado">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="mensaje-error-solicitudes" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-solicitudes"></div>
+                <div class="paginacion" id="paginacion-solicitudes"></div>
+            </div>
+
+            <div class="seccion" id="reportes-pendientes">
+                <h2>Reportes pendientes de aprobación</h2>
+                <div id="mensaje-error-reportes" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-reportes"></div>
+                <div class="paginacion" id="paginacion-reportes"></div>
+            </div>
+
+            <div class="seccion" id="clientes">
+                <h2>Clientes</h2>
+                <p class="subtitulo" style="margin-top: -6px;">Estado de pago, solo informativo — no bloquea ni cierra solicitudes.</p>
+                <div id="mensaje-error-clientes" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-clientes"></div>
+                <div class="paginacion" id="paginacion-clientes"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

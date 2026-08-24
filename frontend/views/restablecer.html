@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restablecer contraseña — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="auth-shell">
+        <div class="auth-marca">
+            <div class="auth-marca-contenido">
+                <img src="../css/logo.png" alt="SoporteNet" class="auth-logo">
+                <p class="auth-categoria">Soporte Técnico · Internet ISP</p>
+                <h2>SoporteNet</h2>
+                <p>Ya casi. Define tu contraseña nueva para volver a entrar.</p>
+            </div>
+        </div>
+
+        <div class="auth-formulario">
+            <div class="tarjeta tarjeta-login">
+                <h1>Restablecer contraseña</h1>
+                <p class="subtitulo">Pega el token que te llegó por correo y elige tu contraseña nueva</p>
+
+                <div id="mensaje-error" class="mensaje-error oculto"></div>
+                <div id="mensaje-exito" class="mensaje-info oculto"></div>
+
+                <form id="form-restablecer">
+                    <div class="campo">
+                        <label for="token">Token de recuperación</label>
+                        <input type="text" id="token" required>
+                    </div>
+                    <div class="campo">
+                        <label for="contrasena">Nueva contraseña (mínimo 8 caracteres)</label>
+                        <div class="campo-con-icono">
+                            <input type="password" id="contrasena" required minlength="8">
+                            <button type="button" class="alternar-contrasena" data-target="contrasena" aria-label="Mostrar contraseña"></button>
+                        </div>
+                    </div>
+                    <div class="campo">
+                        <label for="confirmar">Confirmar contraseña</label>
+                        <div class="campo-con-icono">
+                            <input type="password" id="confirmar" required minlength="8">
+                            <button type="button" class="alternar-contrasena" data-target="confirmar" aria-label="Mostrar contraseña"></button>
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-restablecer" style="width: 100%; justify-content: center;">Restablecer contraseña</button>
+                </form>
+
+                <p style="text-align: center; margin-bottom: 0; margin-top: 18px; font-size: 0.85rem; color: var(--color-texto-suave);">
+                    <a href="login.html">Volver a iniciar sesión</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/restablecer.js"></script>
+</body>
+</html>

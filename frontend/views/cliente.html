@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis solicitudes — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <span class="sidebar-rol">Cliente</span>
+            <nav class="sidebar-nav">
+                <a href="#resumen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Resumen
+                </a>
+                <a href="#nueva-solicitud">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+                    Nueva solicitud
+                </a>
+                <a href="#mis-solicitudes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                    Mis solicitudes
+                </a>
+            </nav>
+            <div class="sidebar-pie">
+                <span class="id-usuario" id="texto-usuario"></span>
+                <button class="secundario" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+                <button class="secundario" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <main class="contenido-principal">
+            <h1>Mis solicitudes</h1>
+
+            <div class="banner-alerta oculto" id="banner-moroso">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a1 1 0 00.86 1.5h18.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0z"/></svg>
+                <span>Tu cuenta tiene un pago pendiente. Por favor regulariza tu situación para evitar inconvenientes con el servicio.</span>
+            </div>
+
+            <div class="seccion" id="resumen">
+                <div class="fila-metricas" id="fila-metricas"></div>
+            </div>
+
+            <div class="seccion tarjeta" id="nueva-solicitud">
+                <h2>Nueva solicitud</h2>
+                <div id="mensaje-error-crear" class="mensaje-error oculto"></div>
+                <form id="form-crear">
+                    <div class="campo">
+                        <label for="descripcion">Descripción del problema</label>
+                        <textarea id="descripcion" required placeholder="Describe qué está pasando..."></textarea>
+                    </div>
+                    <div class="campo" style="max-width: 300px;">
+                        <label for="categoria">Categoría (opcional)</label>
+                        <select id="categoria">
+                            <option value="">Sin especificar</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="btn-crear">Crear solicitud</button>
+                </form>
+            </div>
+
+            <div class="tarjeta oculto" id="panel-adjuntos">
+                <h2>Adjuntos — solicitud <span id="id-solicitud-adjuntos"></span></h2>
+                <p class="subtitulo" style="margin-top: -6px;">Imágenes o PDF, máximo 10MB, hasta 5 archivos por solicitud.</p>
+                <div id="mensaje-error-adjuntos" class="mensaje-error oculto"></div>
+                <div id="lista-adjuntos"></div>
+                <form id="form-adjuntos" style="margin-top: 16px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="campo" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                        <label for="archivo-adjunto">Agregar archivo</label>
+                        <input type="file" id="archivo-adjunto" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                    </div>
+                    <button type="submit" id="btn-subir-adjunto">Subir</button>
+                    <button type="button" class="secundario" id="btn-cerrar-adjuntos">Cerrar</button>
+                </form>
+            </div>
+
+            <div class="seccion" id="mis-solicitudes">
+                <h2>Mis solicitudes</h2>
+                <div class="fila-filtros">
+                    <div class="campo">
+                        <label for="filtro-estado">Filtrar por estado</label>
+                        <select id="filtro-estado">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="mensaje-error-lista" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla"></div>
+                <div class="paginacion" id="paginacion"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/cliente.js"></script>
+</body>
+</html>

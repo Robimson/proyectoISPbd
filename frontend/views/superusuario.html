@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de superusuario — SoporteNet</title>
+    <link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <span class="sidebar-rol">Superusuario</span>
+            <nav class="sidebar-nav">
+                <a href="#resumen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Resumen
+                </a>
+                <a href="#invitar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 016-6h2a6 6 0 016 6v1M18 8v6M15 11h6"/></svg>
+                    Invitar usuario
+                </a>
+                <a href="#usuarios">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 016-6h2a6 6 0 016 6v1"/><circle cx="17" cy="9" r="3"/><path d="M22 21v-1a5 5 0 00-3-4.6"/></svg>
+                    Usuarios
+                </a>
+                <a href="#grupos-tecnicos">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12L6.8 17M12 12l5.2 5"/></svg>
+                    Grupos técnicos
+                </a>
+                <a href="#auditoria">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    Auditoría
+                </a>
+            </nav>
+            <div class="sidebar-pie">
+                <span class="id-usuario" id="texto-usuario"></span>
+                <button class="secundario" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+                <button class="secundario" onclick="cerrarSesion()">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <main class="contenido-principal">
+            <h1>Panel de superusuario</h1>
+
+            <div class="seccion" id="resumen">
+                <div class="fila-metricas" id="fila-metricas"></div>
+            </div>
+
+            <div class="seccion tarjeta" id="invitar">
+                <h2>Invitar usuario</h2>
+                <div id="mensaje-error-invitar" class="mensaje-error oculto"></div>
+                <form id="form-invitar">
+                    <div class="campo">
+                        <label for="nombre-usuario">Nombre completo</label>
+                        <input type="text" id="nombre-usuario" required>
+                    </div>
+                    <div class="campo">
+                        <label for="correo-invitar">Correo</label>
+                        <input type="email" id="correo-invitar" required>
+                    </div>
+                    <div class="campo" style="max-width: 240px;">
+                        <label for="rol-invitar">Rol</label>
+                        <select id="rol-invitar" required>
+                            <option value="cliente">Cliente</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="administrador">Administrador</option>
+                            <option value="superusuario">Superusuario</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="btn-invitar">Enviar invitación</button>
+                </form>
+                <div id="token-generado" class="token-caja oculto"></div>
+            </div>
+
+            <div class="seccion" id="usuarios">
+                <h2>Usuarios</h2>
+                <div class="fila-filtros">
+                    <div class="campo">
+                        <label for="filtro-rol">Filtrar por rol</label>
+                        <select id="filtro-rol">
+                            <option value="">Todos</option>
+                            <option value="cliente">Cliente</option>
+                            <option value="tecnico">Técnico</option>
+                            <option value="administrador">Administrador</option>
+                            <option value="superusuario">Superusuario</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="mensaje-error-usuarios" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-usuarios"></div>
+                <div class="paginacion" id="paginacion-usuarios"></div>
+            </div>
+
+            <div class="seccion" id="grupos-tecnicos">
+                <div class="tarjeta" style="margin-bottom: 20px;">
+                    <h2>Crear grupo técnico</h2>
+                    <div id="mensaje-error-grupo" class="mensaje-error oculto"></div>
+                    <form id="form-grupo" class="detalle-form">
+                        <div class="campo" style="flex: 1; min-width: 200px;">
+                            <label for="nombre-grupo">Nombre del grupo</label>
+                            <input type="text" id="nombre-grupo" required>
+                        </div>
+                        <button type="submit" style="align-self: flex-end;">Crear grupo</button>
+                    </form>
+                </div>
+
+                <div class="tarjeta" style="margin-bottom: 20px;">
+                    <h2>Agregar técnico a un grupo</h2>
+                    <div id="mensaje-error-miembro" class="mensaje-error oculto"></div>
+                    <form id="form-miembro" class="detalle-form">
+                        <div class="campo" style="min-width: 200px;">
+                            <label for="select-grupo-miembro">Grupo</label>
+                            <select id="select-grupo-miembro"></select>
+                        </div>
+                        <div class="campo" style="min-width: 200px;">
+                            <label for="select-tecnico-miembro">Técnico</label>
+                            <select id="select-tecnico-miembro"></select>
+                        </div>
+                        <button type="submit" style="align-self: flex-end;">Agregar</button>
+                    </form>
+                </div>
+
+                <h2>Grupos técnicos existentes</h2>
+                <div id="contenedor-tabla-grupos"></div>
+            </div>
+
+            <div class="seccion" id="auditoria">
+                <h2>Auditoría de sesiones</h2>
+                <p class="subtitulo" style="margin-top: -6px;">Quién entró, cuándo, y desde qué IP.</p>
+                <div class="fila-filtros">
+                    <div class="campo" style="max-width: 200px;">
+                        <label for="filtro-usuario-sesiones">Filtrar por ID de usuario</label>
+                        <input type="number" id="filtro-usuario-sesiones" placeholder="Ej: 5" min="1">
+                    </div>
+                </div>
+                <div id="mensaje-error-sesiones" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-sesiones"></div>
+                <div class="paginacion" id="paginacion-sesiones"></div>
+
+                <h2 style="margin-top: 32px;">Auditoría de datos</h2>
+                <p class="subtitulo" style="margin-top: -6px;">Cambios hechos por técnico, administrador o superusuario en tablas de operación interna. No incluye acciones del cliente.</p>
+                <div class="fila-filtros">
+                    <div class="campo" style="max-width: 240px;">
+                        <label for="filtro-tabla-datos">Filtrar por tabla</label>
+                        <select id="filtro-tabla-datos">
+                            <option value="">Todas</option>
+                            <option value="usuario">usuario</option>
+                            <option value="cliente">cliente</option>
+                            <option value="solicitud">solicitud</option>
+                            <option value="asignacion_solicitud">asignacion_solicitud</option>
+                            <option value="reporte_solicitud">reporte_solicitud</option>
+                            <option value="grupo_tecnico">grupo_tecnico</option>
+                            <option value="tecnico_grupo">tecnico_grupo</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="mensaje-error-datos" class="mensaje-error oculto"></div>
+                <div id="contenedor-tabla-datos"></div>
+                <div class="paginacion" id="paginacion-datos"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/superusuario.js"></script>
+</body>
+</html>
