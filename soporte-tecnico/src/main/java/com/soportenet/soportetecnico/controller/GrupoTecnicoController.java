@@ -2,6 +2,8 @@ package com.soportenet.soportetecnico.controller;
 
 import com.soportenet.soportetecnico.dto.AgregarMiembroRequest;
 import com.soportenet.soportetecnico.dto.CrearGrupoRequest;
+import com.soportenet.soportetecnico.dto.GrupoTecnicoConteoProjection;
+import com.soportenet.soportetecnico.dto.UsuarioBusquedaProjection;
 import com.soportenet.soportetecnico.entity.GrupoTecnico;
 import com.soportenet.soportetecnico.repository.GrupoTecnicoRepository;
 import jakarta.validation.Valid;
@@ -34,9 +36,23 @@ public class GrupoTecnicoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
+    /**
+     * Incluye cuantos tecnicos tiene cada grupo (fn_grupos_tecnicos_con_conteo) -
+     * antes solo se veia el nombre, sin poder distinguir un grupo con 2
+     * tecnicos de uno con 15 solo mirando la lista.
+     */
     @GetMapping
-    public List<GrupoTecnico> listar() {
-        return grupoTecnicoRepository.findAll();
+    public List<GrupoTecnicoConteoProjection> listar() {
+        return grupoTecnicoRepository.listarConConteo();
+    }
+
+    /**
+     * Tecnicos de un grupo puntual, para el modal "Editar grupo" del
+     * Superusuario (ver quien esta y poder quitarlo).
+     */
+    @GetMapping("/{idGrupo}/miembros")
+    public List<UsuarioBusquedaProjection> listarMiembros(@PathVariable Long idGrupo) {
+        return grupoTecnicoRepository.listarMiembros(idGrupo);
     }
 
     @PostMapping("/{idGrupo}/miembros")

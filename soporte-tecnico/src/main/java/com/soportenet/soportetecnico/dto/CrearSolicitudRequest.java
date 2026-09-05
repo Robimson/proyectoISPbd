@@ -11,6 +11,11 @@ import jakarta.validation.constraints.NotBlank;
  * asignar (sp_asignar_solicitud). idCliente tampoco se recibe: se toma del
  * usuario autenticado (JWT), no del body, para que nadie pueda crear
  * solicitudes a nombre de otro cliente.
+ *
+ * direccion es la del SERVICIO para este ticket puntual (no el perfil del
+ * cliente - puede tener mas de una propiedad). Se exige aqui en el DTO para
+ * un mensaje de error claro, y sp_crear_solicitud la vuelve a validar del
+ * lado de la base por si acaso.
  */
 public class CrearSolicitudRequest {
 
@@ -18,6 +23,9 @@ public class CrearSolicitudRequest {
     private String descripcion;
 
     private Integer idCategoria;
+
+    @NotBlank(message = "La direccion no puede estar vacia")
+    private String direccion;
 
     public CrearSolicitudRequest() {
     }
@@ -36,5 +44,13 @@ public class CrearSolicitudRequest {
 
     public void setIdCategoria(Integer idCategoria) {
         this.idCategoria = idCategoria;
+    }
+
+    public String getDireccion() {
+        return direccion;
+    }
+
+    public void setDireccion(String direccion) {
+        this.direccion = direccion;
     }
 }

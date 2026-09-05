@@ -89,6 +89,10 @@
             return '<option value="' + e + '" ' + (e === u.estadoCuenta ? 'selected' : '') + '>' + e + '</option>';
         }).join('');
 
+        const btnPerfilTecnico = u.rol === 'tecnico'
+            ? '<button class="btn-perfil-tecnico secundario" data-id="' + u.idUsuario + '" data-nombre="' + escaparHtml(u.nombreUsuario) + '">Perfil técnico</button>'
+            : '';
+
         return '<tr>' +
             '<td>#' + u.idUsuario + '</td>' +
             '<td>' + escaparHtml(u.nombreUsuario) + '</td>' +
@@ -98,8 +102,97 @@
             '<td><div class="acciones-fila">' +
             '<select class="select-nuevo-estado" data-id="' + u.idUsuario + '">' + opcionesEstado + '</select>' +
             '<button class="btn-cambiar-estado secundario" data-id="' + u.idUsuario + '">Cambiar</button>' +
+            btnPerfilTecnico +
             '</div></td>' +
             '</tr>';
+    }
+
+    /**
+     * Especialidad y nivel quedan en NULL / 'junior' desde que se invita al
+     * tecnico (sp_invitar_usuario) - este modal es el unico lugar que los
+     * llena o actualiza despues (sigue el mismo patron dinamico que
+     * activarModalCambiarContrasena en api.js).
+     */
+    async function abrirModalPerfilTecnico(idTecnico, nombreTecnico) {
+        let tecnicoActual = null;
+        try {
+            tecnicoActual = await apiFetch('/api/tecnicos/' + idTecnico);
+        } catch (error) {
+            console.error('No se pudo cargar el perfil actual del técnico:', error);
+        }
+
+        const nivelActual = tecnicoActual ? tecnicoActual.nivel : 'junior';
+        const especialidadActual = tecnicoActual ? (tecnicoActual.especialidad || '') : '';
+
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-modal';
+        overlay.innerHTML =
+            '<div class="modal">' +
+            '<h3>Perfil técnico — ' + escaparHtml(nombreTecnico) + '</h3>' +
+            '<div id="mensaje-error-perfil-tecnico" class="mensaje-error oculto"></div>' +
+            '<form id="form-perfil-tecnico">' +
+            '<div class="campo">' +
+            '<label for="especialidad-modal">Especialidad</label>' +
+            '<input type="text" id="especialidad-modal" placeholder="Ej: Fibra óptica, redes internas...">' +
+            '</div>' +
+            '<div class="campo">' +
+            '<label for="nivel-modal">Nivel</label>' +
+            '<select id="nivel-modal">' +
+            '<option value="junior">Junior</option>' +
+            '<option value="intermedio">Intermedio</option>' +
+            '<option value="senior">Senior</option>' +
+            '</select>' +
+            '</div>' +
+            '<div class="modal-acciones">' +
+            '<button type="button" class="secundario" data-accion="cancelar">Cancelar</button>' +
+            '<button type="submit" id="btn-confirmar-perfil-tecnico">Guardar</button>' +
+            '</div>' +
+            '</form></div>';
+
+        function cerrar() {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', alPresionarTecla);
+        }
+
+        function alPresionarTecla(evento) {
+            if (evento.key === 'Escape') cerrar();
+        }
+
+        overlay.addEventListener('click', function (evento) {
+            if (evento.target === overlay) cerrar();
+        });
+        overlay.querySelector('[data-accion="cancelar"]').addEventListener('click', cerrar);
+        document.addEventListener('keydown', alPresionarTecla);
+
+        overlay.querySelector('#especialidad-modal').value = especialidadActual;
+        overlay.querySelector('#nivel-modal').value = nivelActual;
+
+        const mensajeError = overlay.querySelector('#mensaje-error-perfil-tecnico');
+        overlay.querySelector('#form-perfil-tecnico').addEventListener('submit', async function (evento) {
+            evento.preventDefault();
+            ocultarMensaje(mensajeError);
+
+            const btnGuardar = overlay.querySelector('#btn-confirmar-perfil-tecnico');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+
+            try {
+                await apiFetch('/api/tecnicos/' + idTecnico + '/perfil', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        especialidad: overlay.querySelector('#especialidad-modal').value.trim(),
+                        nivel: overlay.querySelector('#nivel-modal').value
+                    })
+                });
+                cerrar();
+            } catch (error) {
+                mostrarError(mensajeError, error);
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar';
+            }
+        });
+
+        document.body.appendChild(overlay);
     }
 
     async function cargarUsuarios() {
@@ -129,6 +222,11 @@
 
             contenedorTablaUsuarios.querySelectorAll('.btn-cambiar-estado').forEach(function (boton) {
                 boton.addEventListener('click', manejarCambiarEstado);
+            });
+            contenedorTablaUsuarios.querySelectorAll('.btn-perfil-tecnico').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    abrirModalPerfilTecnico(boton.getAttribute('data-id'), boton.getAttribute('data-nombre'));
+                });
             });
         } catch (error) {
             contenedorTablaUsuarios.innerHTML = '';
@@ -161,37 +259,28 @@
     // ---------- Grupos tecnicos ----------
 
     const mensajeErrorGrupo = document.getElementById('mensaje-error-grupo');
-    const mensajeErrorMiembro = document.getElementById('mensaje-error-miembro');
     const contenedorTablaGrupos = document.getElementById('contenedor-tabla-grupos');
-    const selectGrupoMiembro = document.getElementById('select-grupo-miembro');
-    const selectTecnicoMiembro = document.getElementById('select-tecnico-miembro');
 
     async function cargarGrupos() {
         try {
             const grupos = await apiFetch('/api/grupos-tecnicos');
 
             contenedorTablaGrupos.innerHTML = grupos.length
-                ? '<div class="tabla-scroll"><table><thead><tr><th>ID</th><th>Nombre</th></tr></thead><tbody>' +
-                  grupos.map(function (g) { return '<tr><td>#' + g.idGrupo + '</td><td>' + escaparHtml(g.nombreGrupo) + '</td></tr>'; }).join('') +
+                ? '<div class="tabla-scroll"><table><thead><tr><th>ID</th><th>Nombre</th><th># Técnicos</th><th></th></tr></thead><tbody>' +
+                  grupos.map(function (g) {
+                      return '<tr><td>#' + g.idGrupo + '</td><td>' + escaparHtml(g.nombreGrupo) + '</td><td>' + g.totalTecnicos + '</td>' +
+                          '<td><button class="btn-editar-grupo secundario" data-id="' + g.idGrupo + '" data-nombre="' + escaparHtml(g.nombreGrupo) + '">Editar</button></td></tr>';
+                  }).join('') +
                   '</tbody></table></div>'
                 : '<div class="vacio">Todavía no hay grupos técnicos.</div>';
 
-            selectGrupoMiembro.innerHTML = grupos.map(function (g) {
-                return '<option value="' + g.idGrupo + '">' + escaparHtml(g.nombreGrupo) + '</option>';
-            }).join('') || '<option value="">Crea un grupo primero</option>';
+            contenedorTablaGrupos.querySelectorAll('.btn-editar-grupo').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    abrirModalEditarGrupo(boton.getAttribute('data-id'), boton.getAttribute('data-nombre'));
+                });
+            });
         } catch (error) {
             console.error('No se pudieron cargar los grupos técnicos:', error);
-        }
-    }
-
-    async function cargarTecnicosParaMiembro() {
-        try {
-            const tecnicos = await apiFetch('/api/tecnicos');
-            selectTecnicoMiembro.innerHTML = tecnicos.map(function (t) {
-                return '<option value="' + t.idUsuario + '">' + escaparHtml(t.nombreUsuario) + '</option>';
-            }).join('') || '<option value="">No hay técnicos habilitados</option>';
-        } catch (error) {
-            console.error('No se pudieron cargar los técnicos:', error);
         }
     }
 
@@ -212,42 +301,188 @@
         }
     });
 
-    document.getElementById('form-miembro').addEventListener('submit', async function (evento) {
-        evento.preventDefault();
-        ocultarMensaje(mensajeErrorMiembro);
+    /**
+     * Modal "Editar grupo": dos pantallas dentro del mismo modal, no todo
+     * junto (mezclar "quién ya está" con "buscar para agregar" en un solo
+     * bloque resultaba confuso). Por defecto se ve la lista de miembros
+     * (con "Quitar" - DELETE .../miembros/{id} ya existía en el backend
+     * pero no se podía usar desde ninguna pantalla); "+ Agregar técnico"
+     * cambia a la pantalla de búsqueda, que reemplaza a la lista mientras
+     * está activa. "Volver" regresa a la lista ya actualizada.
+     */
+    async function abrirModalEditarGrupo(idGrupo, nombreGrupo) {
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-modal';
+        overlay.innerHTML =
+            '<div class="modal modal-ancho">' +
+            '<h3>Grupo — ' + escaparHtml(nombreGrupo) + '</h3>' +
+            '<div id="mensaje-error-editar-grupo" class="mensaje-error oculto"></div>' +
+
+            '<div id="vista-miembros-grupo">' +
+            '<div id="lista-miembros-grupo" class="lista-miembros-grupo">Cargando miembros...</div>' +
+            '<button type="button" id="btn-ir-a-agregar" class="secundario" style="width: 100%; margin-top: 12px;">+ Agregar técnico</button>' +
+            '</div>' +
+
+            '<div id="vista-agregar-grupo" class="oculto">' +
+            '<div class="campo" style="position: relative;">' +
+            '<label for="buscar-tecnico-grupo">Buscar técnico</label>' +
+            '<input type="text" id="buscar-tecnico-grupo" placeholder="Nombre o correo..." autocomplete="off">' +
+            '<div id="sugerencias-tecnico-grupo" class="sugerencias-usuario oculto"></div>' +
+            '</div>' +
+            '<div id="mensaje-agregado-grupo" class="mensaje-info oculto" style="margin-bottom: 12px;"></div>' +
+            '<div style="display: flex; gap: 10px;">' +
+            '<button type="button" id="btn-volver-a-miembros" class="secundario" style="flex: 1;">← Volver a la lista</button>' +
+            '<button type="button" id="btn-agregar-miembro-grupo" style="flex: 1;">Agregar</button>' +
+            '</div>' +
+            '</div>' +
+
+            '<div class="modal-acciones">' +
+            '<button type="button" class="secundario" data-accion="cerrar">Cerrar</button>' +
+            '</div>' +
+            '</div>';
+
+        function cerrar() {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', alPresionarTecla);
+            cargarGrupos();
+        }
+
+        function alPresionarTecla(evento) {
+            if (evento.key === 'Escape') cerrar();
+        }
+
+        // Se agrega al documento ANTES de conectar activarBusquedaRemota():
+        // esa funcion busca sus elementos con document.getElementById(), que
+        // no los encuentra mientras el modal solo existe como overlay.innerHTML
+        // (todavia no forma parte del documento vivo).
+        document.body.appendChild(overlay);
+
+        overlay.addEventListener('click', function (evento) {
+            if (evento.target === overlay) cerrar();
+        });
+        overlay.querySelector('[data-accion="cerrar"]').addEventListener('click', cerrar);
+        document.addEventListener('keydown', alPresionarTecla);
+
+        const mensajeError = overlay.querySelector('#mensaje-error-editar-grupo');
+        const mensajeAgregado = overlay.querySelector('#mensaje-agregado-grupo');
+        const listaMiembros = overlay.querySelector('#lista-miembros-grupo');
+        const vistaMiembros = overlay.querySelector('#vista-miembros-grupo');
+        const vistaAgregar = overlay.querySelector('#vista-agregar-grupo');
+
+        async function cargarMiembros() {
+            listaMiembros.textContent = 'Cargando miembros...';
+            try {
+                const miembros = await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros');
+                listaMiembros.innerHTML = miembros.length
+                    ? miembros.map(function (m) {
+                        return '<div class="fila-miembro-grupo">' +
+                            '<span><strong>' + escaparHtml(m.nombreUsuario) + '</strong> · ' + escaparHtml(m.correo) + '</span>' +
+                            '<button type="button" class="btn-quitar-miembro secundario" data-id="' + m.idUsuario + '">Quitar</button>' +
+                            '</div>';
+                    }).join('')
+                    : '<div class="vacio">Este grupo todavía no tiene técnicos.</div>';
+
+                listaMiembros.querySelectorAll('.btn-quitar-miembro').forEach(function (boton) {
+                    boton.addEventListener('click', async function () {
+                        boton.disabled = true;
+                        try {
+                            await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros/' + boton.getAttribute('data-id'), { method: 'DELETE' });
+                            cargarMiembros();
+                        } catch (error) {
+                            mostrarError(mensajeError, error);
+                            boton.disabled = false;
+                        }
+                    });
+                });
+            } catch (error) {
+                listaMiembros.innerHTML = '';
+                mostrarError(mensajeError, error);
+            }
+        }
+
+        const selectorTecnico = activarBusquedaRemota(
+            'buscar-tecnico-grupo',
+            'sugerencias-tecnico-grupo',
+            function (termino) { return apiFetch('/api/tecnicos/buscar?nombre=' + encodeURIComponent(termino)); }
+        );
+
+        function irAVistaAgregar() {
+            ocultarMensaje(mensajeError);
+            ocultarMensaje(mensajeAgregado);
+            selectorTecnico.limpiar();
+            vistaMiembros.classList.add('oculto');
+            vistaAgregar.classList.remove('oculto');
+        }
+
+        function volverAVistaMiembros() {
+            vistaAgregar.classList.add('oculto');
+            vistaMiembros.classList.remove('oculto');
+            cargarMiembros();
+        }
+
+        overlay.querySelector('#btn-ir-a-agregar').addEventListener('click', irAVistaAgregar);
+        overlay.querySelector('#btn-volver-a-miembros').addEventListener('click', volverAVistaMiembros);
+
+        overlay.querySelector('#btn-agregar-miembro-grupo').addEventListener('click', async function () {
+            ocultarMensaje(mensajeError);
+            const idTecnico = selectorTecnico.valor();
+            if (!idTecnico) {
+                mostrarError(mensajeError, new Error('Elegí un técnico de la lista de sugerencias (no alcanza con escribir el nombre).'));
+                return;
+            }
+            try {
+                await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros', {
+                    method: 'POST',
+                    body: JSON.stringify({ idTecnico: Number(idTecnico) })
+                });
+                // Se queda en esta pantalla para poder agregar varios seguidos
+                // sin ir y volver cada vez; "Volver a la lista" ya refresca.
+                mensajeAgregado.textContent = 'Técnico agregado. Podés seguir agregando más.';
+                mensajeAgregado.classList.remove('oculto');
+                selectorTecnico.limpiar();
+            } catch (error) {
+                mostrarError(mensajeError, error);
+            }
+        });
+
+        cargarMiembros();
+    }
+
+    // ---------- Resumen de auditoria ----------
+
+    const filaMetricasAuditoria = document.getElementById('fila-metricas-auditoria');
+
+    async function cargarResumenAuditoria() {
+        filaMetricasAuditoria.innerHTML =
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Sesiones activas</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Cambios hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Inserciones hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Actualizaciones hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Eliminaciones hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Acciones del sistema hoy</div></div>';
 
         try {
-            const idGrupo = selectGrupoMiembro.value;
-            const idTecnico = selectTecnicoMiembro.value;
-
-            if (!idGrupo || !idTecnico) {
-                throw new Error('Selecciona un grupo y un técnico.');
-            }
-
-            await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros', {
-                method: 'POST',
-                body: JSON.stringify({ idTecnico: Number(idTecnico) })
-            });
-
-            mensajeErrorMiembro.textContent = 'Técnico agregado al grupo.';
-            mensajeErrorMiembro.classList.remove('mensaje-error');
-            mensajeErrorMiembro.classList.add('mensaje-info');
-            mensajeErrorMiembro.classList.remove('oculto');
+            const r = await apiFetch('/api/auditoria/resumen');
+            filaMetricasAuditoria.innerHTML =
+                '<div class="tarjeta-metrica"><div class="valor">' + r.sesionesActivas + '</div><div class="etiqueta">Sesiones activas</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.cambiosHoy + '</div><div class="etiqueta">Cambios hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.inserts + '</div><div class="etiqueta">Inserciones hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.updates + '</div><div class="etiqueta">Actualizaciones hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.eliminaciones + '</div><div class="etiqueta">Eliminaciones hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.accionesSistema + '</div><div class="etiqueta">Acciones del sistema hoy</div></div>';
         } catch (error) {
-            mensajeErrorMiembro.classList.remove('mensaje-info');
-            mensajeErrorMiembro.classList.add('mensaje-error');
-            mostrarError(mensajeErrorMiembro, error);
+            console.error('No se pudo cargar el resumen de auditoría:', error);
         }
-    });
+    }
 
     // ---------- Auditoria de sesiones (seccion 11) ----------
 
     const mensajeErrorSesiones = document.getElementById('mensaje-error-sesiones');
     const contenedorTablaSesiones = document.getElementById('contenedor-tabla-sesiones');
     const paginacionSesiones = document.getElementById('paginacion-sesiones');
-    const filtroUsuarioSesiones = document.getElementById('filtro-usuario-sesiones');
 
     let paginaSesiones = 0;
+    let idUsuarioSesionesFiltro = null;
 
     function filaSesion(s) {
         return '<tr>' +
@@ -266,8 +501,8 @@
 
         try {
             let ruta = '/api/auditoria/sesiones?page=' + paginaSesiones + '&size=10';
-            if (filtroUsuarioSesiones.value) {
-                ruta += '&idUsuario=' + encodeURIComponent(filtroUsuarioSesiones.value);
+            if (idUsuarioSesionesFiltro) {
+                ruta += '&idUsuario=' + encodeURIComponent(idUsuarioSesionesFiltro);
             }
 
             const pagina = await apiFetch(ruta);
@@ -290,11 +525,15 @@
         }
     }
 
-    let temporizadorFiltroSesiones = null;
-    filtroUsuarioSesiones.addEventListener('input', function () {
-        clearTimeout(temporizadorFiltroSesiones);
-        temporizadorFiltroSesiones = setTimeout(function () { paginaSesiones = 0; cargarSesiones(); }, 400);
-    });
+    activarBusquedaRemota(
+        'buscar-usuario-sesiones',
+        'sugerencias-usuario',
+        function (termino) { return apiFetch('/api/auditoria/usuarios/buscar?nombre=' + encodeURIComponent(termino)); },
+        {
+            onSeleccionar: function (id) { idUsuarioSesionesFiltro = id; paginaSesiones = 0; cargarSesiones(); },
+            onLimpiar: function () { idUsuarioSesionesFiltro = null; paginaSesiones = 0; cargarSesiones(); }
+        }
+    );
 
     // ---------- Auditoria de datos (operacion interna: tecnico/admin/superusuario) ----------
 
@@ -417,10 +656,11 @@
         if (btnSiguiente) btnSiguiente.addEventListener('click', function () { alCambiar(pagina.number + 1); });
     }
 
+    cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
     cargarUsuarios();
     cargarGrupos();
-    cargarTecnicosParaMiembro();
+    cargarResumenAuditoria();
     cargarSesiones();
     cargarDatos();
     activarNavegacionPorTabs();

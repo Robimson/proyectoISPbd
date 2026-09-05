@@ -28,6 +28,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 016-6h2a6 6 0 016 6v1"/><circle cx="17" cy="9" r="3"/><path d="M22 21v-1a5 5 0 00-3-4.6"/></svg>
                     Clientes
                 </a>
+                <a href="#anuncios">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M7 14v5a2 2 0 002 2h1"/></svg>
+                    Anuncios
+                </a>
             </nav>
             <div class="sidebar-pie">
                 <span class="id-usuario" id="texto-usuario"></span>
@@ -38,6 +42,8 @@
 
         <main class="contenido-principal">
             <h1>Panel de administración</h1>
+
+            <div id="banner-anuncios"></div>
 
             <div class="seccion" id="resumen">
                 <div class="fila-metricas" id="fila-metricas"></div>
@@ -56,13 +62,15 @@
                             <input type="radio" name="tipo-destino" value="grupo"> Grupo técnico
                         </label>
                     </div>
-                    <div class="campo" id="campo-tecnico">
-                        <label for="select-tecnico">Técnico</label>
-                        <select id="select-tecnico"></select>
+                    <div class="campo" id="campo-tecnico" style="position: relative;">
+                        <label for="buscar-tecnico">Técnico</label>
+                        <input type="text" id="buscar-tecnico" placeholder="Nombre o correo..." autocomplete="off">
+                        <div id="sugerencias-tecnico" class="sugerencias-usuario oculto"></div>
                     </div>
-                    <div class="campo oculto" id="campo-grupo">
-                        <label for="select-grupo">Grupo técnico</label>
-                        <select id="select-grupo"></select>
+                    <div class="campo oculto" id="campo-grupo" style="position: relative;">
+                        <label for="buscar-grupo">Grupo técnico</label>
+                        <input type="text" id="buscar-grupo" placeholder="Nombre del grupo..." autocomplete="off">
+                        <div id="sugerencias-grupo" class="sugerencias-usuario oculto"></div>
                     </div>
                     <div class="campo" style="max-width: 240px;">
                         <label for="select-prioridad">Prioridad (opcional)</label>
@@ -120,6 +128,32 @@
                 <div id="mensaje-error-clientes" class="mensaje-error oculto"></div>
                 <div id="contenedor-tabla-clientes"></div>
                 <div class="paginacion" id="paginacion-clientes"></div>
+            </div>
+
+            <div class="seccion" id="anuncios">
+                <div class="tarjeta" style="margin-bottom: 20px;">
+                    <h2>Crear anuncio</h2>
+                    <p class="subtitulo" style="margin-top: -6px;">Se muestra a todos los roles hasta que lo desactivés (o venza, si le ponés fecha).</p>
+                    <div id="mensaje-error-anuncio" class="mensaje-error oculto"></div>
+                    <form id="form-anuncio" class="detalle-form">
+                        <div class="campo" style="flex: 1; min-width: 220px;">
+                            <label for="titulo-anuncio">Título</label>
+                            <input type="text" id="titulo-anuncio" required maxlength="200">
+                        </div>
+                        <div class="campo" style="flex: 2; min-width: 260px;">
+                            <label for="mensaje-anuncio">Mensaje</label>
+                            <textarea id="mensaje-anuncio" required></textarea>
+                        </div>
+                        <div class="campo" style="min-width: 200px;">
+                            <label for="expiracion-anuncio">Vence el (opcional)</label>
+                            <input type="datetime-local" id="expiracion-anuncio">
+                        </div>
+                        <button type="submit" style="align-self: flex-end;">Publicar</button>
+                    </form>
+                </div>
+
+                <h2>Anuncios existentes</h2>
+                <div id="contenedor-tabla-anuncios"></div>
             </div>
         </main>
     </div>

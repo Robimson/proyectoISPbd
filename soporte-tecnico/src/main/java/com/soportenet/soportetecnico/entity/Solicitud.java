@@ -41,6 +41,13 @@ public class Solicitud {
     @Column(name = "fecha_limite_confirmacion")
     private OffsetDateTime fechaLimiteConfirmacion;
 
+    // Direccion del SERVICIO para este ticket puntual, no el perfil del
+    // cliente (un cliente puede tener mas de una propiedad). La llena
+    // sp_crear_solicitud; nullable porque las solicitudes creadas antes de
+    // este cambio no la tienen.
+    @Column(name = "direccion", length = 255)
+    private String direccion;
+
     // Bloqueo optimista: OJO, aqui NO se usa @Version de JPA a proposito.
     // El trigger fn_pre_update_solicitud() ya incrementa esta columna en la BD
     // y rechaza el UPDATE si NEW.version llega distinto de OLD.version.
@@ -118,6 +125,14 @@ public class Solicitud {
 
     public void setFechaLimiteConfirmacion(OffsetDateTime fechaLimiteConfirmacion) {
         this.fechaLimiteConfirmacion = fechaLimiteConfirmacion;
+    }
+
+    public String getDireccion() {
+        return direccion;
+    }
+
+    public void setDireccion(String direccion) {
+        this.direccion = direccion;
     }
 
     public Integer getVersion() {

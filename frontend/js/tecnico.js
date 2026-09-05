@@ -9,6 +9,7 @@
     const mensajeErrorLista = document.getElementById('mensaje-error-lista');
     const contenedorTabla = document.getElementById('contenedor-tabla');
     const paginacion = document.getElementById('paginacion');
+    const filtroEstado = document.getElementById('filtro-estado');
 
     const panelReportar = document.getElementById('panel-reportar');
     const idSolicitudReportar = document.getElementById('id-solicitud-reportar');
@@ -18,12 +19,18 @@
 
     async function cargarMetricas() {
         filaMetricas.innerHTML =
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Tareas asignadas</div></div>';
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">En proceso</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Pendiente aprobación</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Resueltas hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Total cerradas</div></div>';
 
         try {
-            const pagina = await apiFetch('/api/solicitudes/mis-tareas?size=1');
+            const r = await apiFetch('/api/solicitudes/mis-tareas/resumen');
             filaMetricas.innerHTML =
-                '<div class="tarjeta-metrica"><div class="valor">' + pagina.totalElements + '</div><div class="etiqueta">Tareas asignadas</div></div>';
+                '<div class="tarjeta-metrica"><div class="valor">' + r.enProceso + '</div><div class="etiqueta">En proceso</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.pendienteAprobacion + '</div><div class="etiqueta">Pendiente aprobación</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.resueltasHoy + '</div><div class="etiqueta">Resueltas hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.totalCerradas + '</div><div class="etiqueta">Total cerradas</div></div>';
         } catch (error) {
             console.error('No se pudieron cargar las métricas:', error);
         }
@@ -42,13 +49,16 @@
 
     function filaSolicitud(s) {
         const claseBadge = claseBadgeEstado(s.estado);
-        let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>';
+        let acciones = s.estado !== 'Cerrada'
+            ? '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>'
+            : '';
         if (s.estado === 'En Proceso') {
             acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-reportar">Reportar solución</button>';
         }
         return '<tr>' +
             '<td>#' + s.idSolicitud + '</td>' +
             '<td>' + escaparHtml(s.descripcion) + '</td>' +
+            '<td>' + escaparHtml(s.direccion || '—') + '</td>' +
             '<td><span class="badge ' + claseBadge + '">' + escaparHtml(s.estado) + '</span></td>' +
             '<td>' + escaparHtml(s.prioridad || '—') + '</td>' +
             '<td>' + formatearFecha(s.fechaCreacion) + '</td>' +
@@ -56,12 +66,30 @@
             '</tr>';
     }
 
+    async function cargarEstados() {
+        try {
+            const estados = await apiFetch('/api/estados');
+            estados.forEach(function (e) {
+                const opcion = document.createElement('option');
+                opcion.value = e.nombreEstado;
+                opcion.textContent = e.nombreEstado;
+                filtroEstado.appendChild(opcion);
+            });
+        } catch (error) {
+            console.error('No se pudieron cargar los estados:', error);
+        }
+    }
+
     async function cargarMisTareas() {
         ocultarMensaje(mensajeErrorLista);
         contenedorTabla.innerHTML = htmlCargando();
 
         try {
-            const pagina = await apiFetch('/api/solicitudes/mis-tareas?page=' + paginaActual + '&size=10');
+            let ruta = '/api/solicitudes/mis-tareas?page=' + paginaActual + '&size=10';
+            if (filtroEstado.value) {
+                ruta += '&estado=' + encodeURIComponent(filtroEstado.value);
+            }
+            const pagina = await apiFetch(ruta);
 
             if (!pagina.content || pagina.content.length === 0) {
                 contenedorTabla.innerHTML = '<div class="vacio">No tienes tareas asignadas.</div>';
@@ -72,7 +100,7 @@
             const filas = pagina.content.map(filaSolicitud).join('');
             contenedorTabla.innerHTML =
                 '<div class="tabla-scroll"><table><thead><tr>' +
-                '<th>ID</th><th>Descripción</th><th>Estado</th><th>Prioridad</th><th>Creada</th><th></th>' +
+                '<th>ID</th><th>Descripción</th><th>Dirección</th><th>Estado</th><th>Prioridad</th><th>Creada</th><th></th>' +
                 '</tr></thead><tbody>' + filas + '</tbody></table></div>';
 
             renderizarPaginacion(pagina);
@@ -144,7 +172,14 @@
         }
     });
 
+    filtroEstado.addEventListener('change', function () {
+        paginaActual = 0;
+        cargarMisTareas();
+    });
+
+    cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
+    cargarEstados();
     cargarMisTareas();
     activarNavegacionPorTabs();
 })();

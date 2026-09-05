@@ -57,6 +57,17 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", mensaje));
     }
 
+    /**
+     * Varios controladores usan IllegalStateException cuando una operacion
+     * se completo pero la entidad no se pudo volver a leer (caso extremo,
+     * casi nunca deberia pasar). Sin esto llegaba como 500 crudo.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", ex.getMessage() != null ? ex.getMessage() : "Ocurrio un error interno."));
+    }
+
     private String extraerMensajePostgres(Throwable ex) {
         Throwable actual = ex;
         // El mensaje real del RAISE EXCEPTION suele estar en la causa raiz (PSQLException)

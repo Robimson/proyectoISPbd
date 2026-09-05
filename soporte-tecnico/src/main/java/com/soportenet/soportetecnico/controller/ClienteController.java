@@ -39,6 +39,23 @@ public class ClienteController {
         return ResponseEntity.ok(pagina.map(ClienteResponse::fromEntity));
     }
 
+    /**
+     * Cliente: sus propios datos, usados para precargar la direccion en el
+     * formulario de "Nueva solicitud" con la ultima que uso (sp_crear_solicitud
+     * la va actualizando en cada ticket). idCliente sale del JWT, nunca de un
+     * path variable, asi que un cliente nunca puede pedir el perfil de otro.
+     */
+    @GetMapping("/mi-perfil")
+    public ResponseEntity<ClienteResponse> miPerfil(Authentication authentication) {
+        Long idCliente = Long.valueOf(authentication.getName());
+
+        Cliente cliente = clienteRepository.findById(idCliente)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cliente autenticado no encontrado (id=" + idCliente + ")"));
+
+        return ResponseEntity.ok(ClienteResponse.fromEntity(cliente));
+    }
+
     @PostMapping("/{id}/estado-pago")
     @Transactional
     public ResponseEntity<ClienteResponse> cambiarEstadoPago(@PathVariable Long id,

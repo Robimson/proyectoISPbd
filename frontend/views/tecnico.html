@@ -31,6 +31,8 @@
         <main class="contenido-principal">
             <h1>Mis tareas</h1>
 
+            <div id="banner-anuncios"></div>
+
             <div class="seccion" id="resumen">
                 <div class="fila-metricas" id="fila-metricas"></div>
             </div>
@@ -64,6 +66,14 @@
             </div>
 
             <div class="seccion" id="mis-tareas">
+                <div class="fila-filtros">
+                    <div class="campo">
+                        <label for="filtro-estado">Filtrar por estado</label>
+                        <select id="filtro-estado">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
                 <div id="mensaje-error-lista" class="mensaje-error oculto"></div>
                 <div id="contenedor-tabla"></div>
                 <div class="paginacion" id="paginacion"></div>

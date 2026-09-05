@@ -69,6 +69,19 @@
         }
     }
 
+    /** Precarga el campo Dirección con la última que el cliente uso (sp_crear_solicitud la va guardando en cada ticket). */
+    async function cargarDireccionSugerida() {
+        try {
+            const perfil = await apiFetch('/api/clientes/mi-perfil');
+            if (perfil.direccion) {
+                document.getElementById('direccion').value = perfil.direccion;
+            }
+        } catch (error) {
+            // No bloquea la creacion de tickets si no se pudo precargar.
+            console.error('No se pudo precargar la dirección:', error);
+        }
+    }
+
     const abrirAdjuntos = activarPanelAdjuntos({
         idPanel: 'panel-adjuntos',
         idSpanSolicitud: 'id-solicitud-adjuntos',
@@ -82,7 +95,9 @@
 
     function filaSolicitud(s) {
         const claseBadge = claseBadgeEstado(s.estado);
-        let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>';
+        let acciones = s.estado !== 'Cerrada'
+            ? '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>'
+            : '';
         if (s.estado === 'Resuelta - Pendiente Confirmación del Cliente') {
             acciones +=
                 ' <div class="acciones-fila" style="display:inline-flex;">' +
@@ -181,17 +196,22 @@
 
         try {
             const descripcion = document.getElementById('descripcion').value.trim();
+            const direccion = document.getElementById('direccion').value.trim();
             const idCategoriaValor = document.getElementById('categoria').value;
 
             await apiFetch('/api/solicitudes', {
                 method: 'POST',
                 body: JSON.stringify({
                     descripcion: descripcion,
-                    idCategoria: idCategoriaValor ? Number(idCategoriaValor) : null
+                    idCategoria: idCategoriaValor ? Number(idCategoriaValor) : null,
+                    direccion: direccion
                 })
             });
 
             document.getElementById('form-crear').reset();
+            // El reset() del form tambien vacia direccion; se vuelve a poner
+            // porque ya quedo guardada como "ultima conocida" en el servidor.
+            document.getElementById('direccion').value = direccion;
             paginaActual = 0;
             cargarSolicitudes();
         } catch (error) {
@@ -207,9 +227,11 @@
         cargarSolicitudes();
     });
 
+    cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
     cargarCategorias();
     cargarEstados();
+    cargarDireccionSugerida();
     cargarSolicitudes();
     activarNavegacionPorTabs();
 })();

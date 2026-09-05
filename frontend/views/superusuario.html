@@ -43,6 +43,8 @@
         <main class="contenido-principal">
             <h1>Panel de superusuario</h1>
 
+            <div id="banner-anuncios"></div>
+
             <div class="seccion" id="resumen">
                 <div class="fila-metricas" id="fila-metricas"></div>
             </div>
@@ -105,33 +107,21 @@
                     </form>
                 </div>
 
-                <div class="tarjeta" style="margin-bottom: 20px;">
-                    <h2>Agregar técnico a un grupo</h2>
-                    <div id="mensaje-error-miembro" class="mensaje-error oculto"></div>
-                    <form id="form-miembro" class="detalle-form">
-                        <div class="campo" style="min-width: 200px;">
-                            <label for="select-grupo-miembro">Grupo</label>
-                            <select id="select-grupo-miembro"></select>
-                        </div>
-                        <div class="campo" style="min-width: 200px;">
-                            <label for="select-tecnico-miembro">Técnico</label>
-                            <select id="select-tecnico-miembro"></select>
-                        </div>
-                        <button type="submit" style="align-self: flex-end;">Agregar</button>
-                    </form>
-                </div>
-
                 <h2>Grupos técnicos existentes</h2>
+                <p class="subtitulo" style="margin-top: -6px;">"Editar" abre el detalle del grupo para agregar o quitar técnicos.</p>
                 <div id="contenedor-tabla-grupos"></div>
             </div>
 
             <div class="seccion" id="auditoria">
+                <div class="fila-metricas" id="fila-metricas-auditoria"></div>
+
                 <h2>Auditoría de sesiones</h2>
                 <p class="subtitulo" style="margin-top: -6px;">Quién entró, cuándo, y desde qué IP.</p>
                 <div class="fila-filtros">
-                    <div class="campo" style="max-width: 200px;">
-                        <label for="filtro-usuario-sesiones">Filtrar por ID de usuario</label>
-                        <input type="number" id="filtro-usuario-sesiones" placeholder="Ej: 5" min="1">
+                    <div class="campo" style="max-width: 280px; position: relative;">
+                        <label for="buscar-usuario-sesiones">Filtrar por usuario</label>
+                        <input type="text" id="buscar-usuario-sesiones" placeholder="Nombre o correo..." autocomplete="off">
+                        <div id="sugerencias-usuario" class="sugerencias-usuario oculto"></div>
                     </div>
                 </div>
                 <div id="mensaje-error-sesiones" class="mensaje-error oculto"></div>

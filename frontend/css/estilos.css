@@ -281,6 +281,14 @@ button:disabled {
     cursor: not-allowed;
 }
 
+/* Para filas de acciones con varios botones juntos (ej: Reportes pendientes:
+   Ver evidencias / Aprobar / Rechazar) - el tamaño normal de boton es
+   demasiado grande para 3 en una sola fila de tabla. */
+.btn-compacto {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
 .mensaje-error {
     background: var(--color-peligro-suave);
     color: var(--color-peligro);
@@ -319,6 +327,29 @@ button:disabled {
     height: 20px;
     flex-shrink: 0;
     stroke: currentColor;
+}
+
+/* Anuncio global del administrador (seccion 2.3) - tono informativo, no de
+   advertencia, para distinguirlo del banner-alerta (que es sobre TU cuenta). */
+.banner-anuncio {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radio-lg);
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.banner-anuncio svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    margin-top: 2px;
 }
 
 .oculto {
@@ -562,6 +593,61 @@ tbody tr:hover {
 .badge-al_dia { background: #d1fae5; color: #065f46; }
 .badge-moroso { background: #fee2e2; color: #991b1b; }
 
+.sugerencias-usuario {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    margin-top: 4px;
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.sugerencia-usuario {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: 9px 12px;
+    background: none;
+    color: var(--color-texto);
+    border: none;
+    border-bottom: 1px solid var(--color-borde);
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.sugerencia-usuario:last-child { border-bottom: none; }
+.sugerencia-usuario:hover { background: var(--color-primario-suave); }
+.sugerencia-usuario span { color: var(--color-texto-suave); font-size: 0.78rem; }
+
+.fila-miembro-grupo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-borde);
+    font-size: 0.85rem;
+}
+
+.fila-miembro-grupo:last-child { border-bottom: none; }
+.fila-miembro-grupo span { color: var(--color-texto); }
+
+.sugerencia-vacia {
+    padding: 10px 12px;
+    color: var(--color-texto-suave);
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
 .vacio {
     color: var(--color-texto-suave);
     font-style: italic;
@@ -677,7 +763,23 @@ tbody tr:hover {
     padding: 24px;
     max-width: 420px;
     width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: var(--sombra-modal);
+}
+
+/* Para modales con contenido mas denso (listas, buscadores) donde 420px
+   queda apretado - ej: editar grupo, evidencias. */
+.modal-ancho {
+    max-width: 560px;
+}
+
+.lista-miembros-grupo {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    padding: 4px 10px;
 }
 
 .modal h3 {

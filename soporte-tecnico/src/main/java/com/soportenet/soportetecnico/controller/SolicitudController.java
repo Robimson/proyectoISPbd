@@ -2,6 +2,7 @@ package com.soportenet.soportetecnico.controller;
 
 import com.soportenet.soportetecnico.dto.ConfirmarClienteRequest;
 import com.soportenet.soportetecnico.dto.CrearSolicitudRequest;
+import com.soportenet.soportetecnico.dto.ResumenTecnicoProjection;
 import com.soportenet.soportetecnico.dto.SolicitudResponse;
 import com.soportenet.soportetecnico.entity.Solicitud;
 import com.soportenet.soportetecnico.repository.SolicitudRepository;
@@ -45,7 +46,8 @@ public class SolicitudController {
         Long idSolicitud = solicitudRepository.crearSolicitud(
                 idCliente,
                 request.getDescripcion(),
-                request.getIdCategoria()
+                request.getIdCategoria(),
+                request.getDireccion()
         );
 
         Solicitud creada = solicitudRepository.findById(idSolicitud)
@@ -68,8 +70,8 @@ public class SolicitudController {
      * solamente puede consultar sus propias solicitudes.
      *
      * TECNICO:
-     * temporalmente se valida en un siguiente paso según
-     * asignación directa o grupo técnico.
+     * solamente puede consultar solicitudes asignadas a el
+     * directo, o a un grupo del que es miembro.
      */
     @GetMapping("/{id}")
     public ResponseEntity<SolicitudResponse> obtener(
@@ -121,11 +123,21 @@ public class SolicitudController {
 
         /*
          * Tecnico:
-         * en el siguiente paso comprobaremos si la solicitud
-         * esta asignada directamente al tecnico o a uno de
-         * los grupos a los que pertenece.
+         * puede consultar la solicitud si esta asignada
+         * directamente a el, o a un grupo del que es miembro
+         * (solo cuenta la asignacion vigente).
          */
         if (tieneRol(authentication, "TECNICO")) {
+
+            boolean tieneAcceso =
+                    solicitudRepository.tecnicoTieneAcceso(id, idUsuario);
+
+            if (tieneAcceso) {
+                return ResponseEntity.ok(
+                        SolicitudResponse.fromEntity(solicitud)
+                );
+            }
+
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .build();
@@ -196,10 +208,11 @@ public class SolicitudController {
     /**
      * Tecnico:
      * lista las solicitudes asignadas directamente al técnico
-     * o a alguno de sus grupos.
+     * o a alguno de sus grupos. Se puede filtrar opcionalmente por estado.
      */
     @GetMapping("/mis-tareas")
     public ResponseEntity<Page<SolicitudResponse>> misTareas(
+            @RequestParam(required = false) String estado,
             @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication) {
 
@@ -209,11 +222,27 @@ public class SolicitudController {
         Page<Solicitud> pagina =
                 solicitudRepository.findMisTareas(
                         idTecnico,
+                        estado,
                         pageable
                 );
 
         return ResponseEntity.ok(
                 pagina.map(SolicitudResponse::fromEntity)
+        );
+    }
+
+    /**
+     * Tecnico: conteos para la pestana "Resumen" de su panel (en proceso,
+     * pendiente aprobacion, resueltas hoy, total cerradas).
+     */
+    @GetMapping("/mis-tareas/resumen")
+    public ResponseEntity<ResumenTecnicoProjection> resumenMisTareas(
+            Authentication authentication) {
+
+        Long idTecnico = Long.valueOf(authentication.getName());
+
+        return ResponseEntity.ok(
+                solicitudRepository.resumenTecnico(idTecnico)
         );
     }
 

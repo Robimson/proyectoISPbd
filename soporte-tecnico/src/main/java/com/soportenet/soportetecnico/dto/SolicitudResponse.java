@@ -18,15 +18,17 @@ public class SolicitudResponse {
     private final String estado;
     private final String prioridad;
     private final Integer version;
+    private final String direccion;
 
     public SolicitudResponse(Long idSolicitud, String descripcion, OffsetDateTime fechaCreacion,
-                              String estado, String prioridad, Integer version) {
+                              String estado, String prioridad, Integer version, String direccion) {
         this.idSolicitud = idSolicitud;
         this.descripcion = descripcion;
         this.fechaCreacion = fechaCreacion;
         this.estado = estado;
         this.prioridad = prioridad;
         this.version = version;
+        this.direccion = direccion;
     }
 
     public static SolicitudResponse fromEntity(Solicitud s) {
@@ -36,7 +38,8 @@ public class SolicitudResponse {
                 s.getFechaCreacion(),
                 s.getEstado() != null ? s.getEstado().getNombreEstado() : null,
                 s.getPrioridad() != null ? s.getPrioridad().getNombrePrioridad() : null,
-                s.getVersion()
+                s.getVersion(),
+                s.getDireccion()
         );
     }
 
@@ -62,5 +65,9 @@ public class SolicitudResponse {
 
     public Integer getVersion() {
         return version;
+    }
+
+    public String getDireccion() {
+        return direccion;
     }
 }

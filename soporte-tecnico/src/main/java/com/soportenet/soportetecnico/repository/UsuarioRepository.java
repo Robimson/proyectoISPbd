@@ -1,5 +1,6 @@
 package com.soportenet.soportetecnico.repository;
 
+import com.soportenet.soportetecnico.dto.UsuarioBusquedaProjection;
 import com.soportenet.soportetecnico.entity.Usuario;
 import com.soportenet.soportetecnico.enums.RolUsuario;
 import org.springframework.data.domain.Page;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -94,4 +96,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             @Param("token") String token,
             @Param("contrasenaHash") String contrasenaHash
     );
+
+    /**
+     * Invoca fn_buscar_usuarios(...) - autocompletar por nombre o correo
+     * para el filtro de "Auditoria de sesiones" (hoy solo filtraba por ID
+     * exacto). Hasta 8 coincidencias.
+     */
+    @Query(value = "SELECT * FROM fn_buscar_usuarios(:termino)", nativeQuery = true)
+    List<UsuarioBusquedaProjection> buscarUsuarios(@Param("termino") String termino);
+
+    /**
+     * Igual que buscarUsuarios(...) pero filtrado a solo tecnicos - usado en
+     * "Agregar técnico a un grupo", que antes era un <select> con los ~3000
+     * tecnicos de prueba sin poder buscar.
+     */
+    @Query(value = "SELECT * FROM fn_buscar_usuarios(:termino, 'tecnico')", nativeQuery = true)
+    List<UsuarioBusquedaProjection> buscarTecnicos(@Param("termino") String termino);
 }

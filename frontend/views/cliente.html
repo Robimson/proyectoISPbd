@@ -35,6 +35,8 @@
         <main class="contenido-principal">
             <h1>Mis solicitudes</h1>
 
+            <div id="banner-anuncios"></div>
+
             <div class="banner-alerta oculto" id="banner-moroso">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a1 1 0 00.86 1.5h18.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0z"/></svg>
                 <span>Tu cuenta tiene un pago pendiente. Por favor regulariza tu situación para evitar inconvenientes con el servicio.</span>
@@ -51,6 +53,11 @@
                     <div class="campo">
                         <label for="descripcion">Descripción del problema</label>
                         <textarea id="descripcion" required placeholder="Describe qué está pasando..."></textarea>
+                    </div>
+                    <div class="campo">
+                        <label for="direccion">Dirección del servicio</label>
+                        <input type="text" id="direccion" required placeholder="Calle, número, sector/referencia...">
+                        <p class="subtitulo" style="margin-top: 4px;">Es la dirección a donde iría el técnico. Se precarga con la última que usaste, pero podés cambiarla si el problema es en otra propiedad.</p>
                     </div>
                     <div class="campo" style="max-width: 300px;">
                         <label for="categoria">Categoría (opcional)</label>

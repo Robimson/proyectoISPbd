@@ -2,8 +2,13 @@
 soporte-tecnico/target/
 soporte-tecnico/src/main/resources/application.properties
 
-# Archivos de evidencia subidos por usuarios (fotos/PDF) - nunca al repo
+# Archivos de evidencia subidos por usuarios (fotos/PDF) - nunca al repo.
+# app.storage.adjuntos-dir es una ruta relativa (./uploads/adjuntos), asi que
+# termina en un lugar distinto segun desde donde se corra la app - la
+# variante de la raiz cubre correrlo desde IntelliJ con el working directory
+# en la raiz del repo.
 soporte-tecnico/uploads/
+uploads/
 
 # IDE
 .idea/

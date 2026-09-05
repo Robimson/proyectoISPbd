@@ -7,6 +7,7 @@ import com.soportenet.soportetecnico.dto.ReporteResponse;
 import com.soportenet.soportetecnico.entity.ReporteSolicitud;
 import com.soportenet.soportetecnico.enums.EstadoAprobacion;
 import com.soportenet.soportetecnico.repository.ReporteSolicitudRepository;
+import com.soportenet.soportetecnico.repository.SolicitudRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,9 +32,12 @@ public class ReporteController {
     private static final int DIAS_PLAZO_CONFIRMACION_DEFAULT = 3;
 
     private final ReporteSolicitudRepository reporteSolicitudRepository;
+    private final SolicitudRepository solicitudRepository;
 
-    public ReporteController(ReporteSolicitudRepository reporteSolicitudRepository) {
+    public ReporteController(ReporteSolicitudRepository reporteSolicitudRepository,
+                              SolicitudRepository solicitudRepository) {
         this.reporteSolicitudRepository = reporteSolicitudRepository;
+        this.solicitudRepository = solicitudRepository;
     }
 
     @PostMapping("/api/solicitudes/{id}/reportes")
@@ -56,12 +61,68 @@ public class ReporteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ReporteResponse.fromEntity(creado));
     }
 
+    /**
+     * Consulta un reporte por id.
+     *
+     * ADMINISTRADOR / SUPERUSUARIO: cualquier reporte.
+     * CLIENTE: solo reportes de sus propias solicitudes.
+     * TECNICO: solo reportes de solicitudes a las que tiene acceso vigente
+     * (mismo chequeo que SolicitudController.obtener()).
+     */
     @GetMapping("/api/reportes/{id}")
-    public ResponseEntity<ReporteResponse> obtener(@PathVariable Long id) {
-        return reporteSolicitudRepository.findById(id)
-                .map(ReporteResponse::fromEntity)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ReporteResponse> obtener(@PathVariable Long id, Authentication authentication) {
+
+        ReporteSolicitud reporte = reporteSolicitudRepository.findById(id).orElse(null);
+
+        if (reporte == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (tieneRol(authentication, "ADMINISTRADOR") || tieneRol(authentication, "SUPERUSUARIO")) {
+            return ResponseEntity.ok(ReporteResponse.fromEntity(reporte));
+        }
+
+        Long idUsuario = Long.valueOf(authentication.getName());
+
+        if (tieneRol(authentication, "CLIENTE")) {
+
+            if (reporte.getSolicitud() != null
+                    && reporte.getSolicitud().getCliente() != null
+                    && reporte.getSolicitud().getCliente().getIdUsuario() != null
+                    && reporte.getSolicitud().getCliente().getIdUsuario().equals(idUsuario)) {
+
+                return ResponseEntity.ok(ReporteResponse.fromEntity(reporte));
+            }
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        if (tieneRol(authentication, "TECNICO")) {
+
+            boolean tieneAcceso = reporte.getSolicitud() != null
+                    && solicitudRepository.tecnicoTieneAcceso(reporte.getSolicitud().getIdSolicitud(), idUsuario);
+
+            if (tieneAcceso) {
+                return ResponseEntity.ok(ReporteResponse.fromEntity(reporte));
+            }
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    /**
+     * Comprueba si el usuario autenticado posee un rol determinado.
+     */
+    private boolean tieneRol(Authentication authentication, String rol) {
+        String authority = "ROLE_" + rol;
+        for (GrantedAuthority ga : authentication.getAuthorities()) {
+            if (ga.getAuthority().equals(authority)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -28,9 +28,19 @@
     const idSolicitudAsignar = document.getElementById('id-solicitud-asignar');
     const mensajeErrorAsignar = document.getElementById('mensaje-error-asignar');
     const formAsignar = document.getElementById('form-asignar');
-    const selectTecnico = document.getElementById('select-tecnico');
-    const selectGrupo = document.getElementById('select-grupo');
     const selectPrioridad = document.getElementById('select-prioridad');
+
+    // "Técnico" busca en el servidor (miles de registros, no se puede traer
+    // todo de antemano); "Grupo" filtra en el cliente (lista chica, se
+    // recarga entera cada vez). Antes ambos eran <select> con TODO el
+    // contenido - con ~3000 técnicos de prueba, el de técnico era imposible
+    // de usar.
+    const selectorTecnicoAsignar = activarBusquedaRemota(
+        'buscar-tecnico',
+        'sugerencias-tecnico',
+        function (termino) { return apiFetch('/api/tecnicos/buscar?nombre=' + encodeURIComponent(termino)); }
+    );
+    const selectorGrupoAsignar = activarSelectorBuscable('buscar-grupo', 'sugerencias-grupo');
 
     const panelRechazar = document.getElementById('panel-rechazar');
     const idReporteRechazar = document.getElementById('id-reporte-rechazar');
@@ -75,20 +85,15 @@
 
     async function cargarCatalogos() {
         try {
-            const [tecnicos, grupos, prioridades, estados] = await Promise.all([
-                apiFetch('/api/tecnicos'),
+            const [grupos, prioridades, estados] = await Promise.all([
                 apiFetch('/api/grupos-tecnicos'),
                 apiFetch('/api/prioridades'),
                 apiFetch('/api/estados')
             ]);
 
-            selectTecnico.innerHTML = tecnicos.map(function (t) {
-                return '<option value="' + t.idUsuario + '">' + escaparHtml(t.nombreUsuario) + ' (' + escaparHtml(t.nivel) + ')</option>';
-            }).join('') || '<option value="">No hay técnicos habilitados</option>';
-
-            selectGrupo.innerHTML = grupos.map(function (g) {
-                return '<option value="' + g.idGrupo + '">' + escaparHtml(g.nombreGrupo) + '</option>';
-            }).join('') || '<option value="">No hay grupos creados</option>';
+            selectorGrupoAsignar.setOpciones(grupos.map(function (g) {
+                return { valor: g.idGrupo, etiqueta: g.nombreGrupo };
+            }));
 
             prioridades.forEach(function (p) {
                 const opcion = document.createElement('option');
@@ -195,6 +200,8 @@
         formAsignar.dataset.idSolicitud = idSolicitud;
         document.getElementById('motivo-reasignacion').value = '';
         selectPrioridad.value = '';
+        selectorTecnicoAsignar.limpiar();
+        selectorGrupoAsignar.limpiar();
         ocultarMensaje(mensajeErrorAsignar);
         panelAsignar.scrollIntoView({ behavior: 'smooth' });
     }
@@ -216,12 +223,21 @@
             const esTecnico = document.querySelector('input[name="tipo-destino"]:checked').value === 'tecnico';
             const motivo = document.getElementById('motivo-reasignacion').value.trim();
             const prioridad = selectPrioridad.value;
+            const idTecnico = selectorTecnicoAsignar.valor();
+            const idGrupo = selectorGrupoAsignar.valor();
+
+            if (esTecnico && !idTecnico) {
+                throw new Error('Elegí un técnico de la lista de sugerencias (no alcanza con escribir el nombre).');
+            }
+            if (!esTecnico && !idGrupo) {
+                throw new Error('Elegí un grupo de la lista de sugerencias (no alcanza con escribir el nombre).');
+            }
 
             await apiFetch('/api/solicitudes/' + idSolicitud + '/asignaciones', {
                 method: 'POST',
                 body: JSON.stringify({
-                    idTecnico: esTecnico ? Number(selectTecnico.value) : null,
-                    idGrupo: esTecnico ? null : Number(selectGrupo.value),
+                    idTecnico: esTecnico ? Number(idTecnico) : null,
+                    idGrupo: esTecnico ? null : Number(idGrupo),
                     idPrioridad: prioridad ? Number(prioridad) : null,
                     motivoReasignacion: motivo || null
                 })
@@ -250,8 +266,9 @@
             '<td>' + escaparHtml(r.detalleReporte) + '</td>' +
             '<td>' + formatearFecha(r.fechaEnvio) + '</td>' +
             '<td><div class="acciones-fila">' +
-            '<button data-id="' + r.idReporte + '" class="btn-aprobar">Aprobar</button>' +
-            '<button data-id="' + r.idReporte + '" class="btn-rechazar secundario">Rechazar</button>' +
+            '<button data-id-solicitud="' + r.idSolicitud + '" class="btn-ver-evidencias secundario btn-compacto">Ver evidencias</button>' +
+            '<button data-id="' + r.idReporte + '" class="btn-aprobar btn-compacto">Aprobar</button>' +
+            '<button data-id="' + r.idReporte + '" class="btn-rechazar secundario btn-compacto">Rechazar</button>' +
             '</div></td>' +
             '</tr>';
     }
@@ -284,9 +301,88 @@
             contenedorTablaReportes.querySelectorAll('.btn-rechazar').forEach(function (boton) {
                 boton.addEventListener('click', function () { abrirPanelRechazar(boton.getAttribute('data-id')); });
             });
+            contenedorTablaReportes.querySelectorAll('.btn-ver-evidencias').forEach(function (boton) {
+                boton.addEventListener('click', function () { abrirModalEvidencias(boton.getAttribute('data-id-solicitud')); });
+            });
         } catch (error) {
             contenedorTablaReportes.innerHTML = '';
             mostrarError(mensajeErrorReportes, error);
+        }
+    }
+
+    /**
+     * Antes de esta funcion, el Administrador aprobaba o rechazaba un
+     * reporte sin ver ninguna evidencia (ni la del cliente al crear el
+     * ticket, ni la del tecnico al resolverlo) - aprobaba a ciegas, solo con
+     * el texto del reporte. El backend (AdjuntoController) ya dejaba pasar a
+     * ADMINISTRADOR/SUPERUSUARIO para cualquier solicitud, asi que esto es
+     * pura pantalla nueva, sin tocar SQL ni backend.
+     */
+    async function abrirModalEvidencias(idSolicitud) {
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-modal';
+        overlay.innerHTML =
+            '<div class="modal modal-ancho">' +
+            '<h3>Evidencias — solicitud #' + idSolicitud + '</h3>' +
+            '<p>Del cliente (al crear el ticket) y del técnico (al reportar la solución).</p>' +
+            '<div id="mensaje-error-evidencias" class="mensaje-error oculto"></div>' +
+            '<div id="lista-evidencias" class="lista-miembros-grupo">Cargando evidencias...</div>' +
+            '<div class="modal-acciones">' +
+            '<button type="button" class="secundario" data-accion="cerrar">Cerrar</button>' +
+            '</div>' +
+            '</div>';
+
+        function cerrar() {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', alPresionarTecla);
+        }
+
+        function alPresionarTecla(evento) {
+            if (evento.key === 'Escape') cerrar();
+        }
+
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', function (evento) {
+            if (evento.target === overlay) cerrar();
+        });
+        overlay.querySelector('[data-accion="cerrar"]').addEventListener('click', cerrar);
+        document.addEventListener('keydown', alPresionarTecla);
+
+        const mensajeError = overlay.querySelector('#mensaje-error-evidencias');
+        const lista = overlay.querySelector('#lista-evidencias');
+
+        function iconoParaTipo(tipo) {
+            if (!tipo) return '📎';
+            if (tipo.startsWith('image/')) return '🖼️';
+            if (tipo === 'application/pdf') return '📄';
+            return '📎';
+        }
+
+        try {
+            const adjuntos = await apiFetch('/api/solicitudes/' + idSolicitud + '/adjuntos');
+
+            lista.innerHTML = adjuntos.length
+                ? adjuntos.map(function (a) {
+                    return '<div class="fila-miembro-grupo">' +
+                        '<span>' + iconoParaTipo(a.tipoArchivo) + ' <strong>' + escaparHtml(a.nombreArchivo) + '</strong> · ' + escaparHtml(a.tipoArchivo || '') + '</span>' +
+                        '<button type="button" class="btn-ver-evidencia secundario" data-id="' + a.idAdjunto + '">Ver</button>' +
+                        '</div>';
+                }).join('')
+                : '<div class="vacio">Esta solicitud no tiene evidencias adjuntas.</div>';
+
+            lista.querySelectorAll('.btn-ver-evidencia').forEach(function (boton) {
+                boton.addEventListener('click', async function () {
+                    const textoOriginal = boton.textContent;
+                    boton.disabled = true;
+                    boton.textContent = 'Abriendo...';
+                    await abrirArchivoConAutenticacion('/api/adjuntos/' + boton.getAttribute('data-id') + '/archivo');
+                    boton.disabled = false;
+                    boton.textContent = textoOriginal;
+                });
+            });
+        } catch (error) {
+            lista.innerHTML = '';
+            mostrarError(mensajeError, error);
         }
     }
 
@@ -433,6 +529,95 @@
         }
     }
 
+    // ---------- Anuncios globales (seccion 2.3) ----------
+    // La tabla ya existia en el esquema original pero nunca se habia
+    // conectado a ningun procedimiento ni pantalla - el objetivo es que un
+    // corte masivo se comunique una sola vez en vez de que cada cliente cree
+    // su propio ticket duplicado.
+
+    const mensajeErrorAnuncio = document.getElementById('mensaje-error-anuncio');
+    const contenedorTablaAnuncios = document.getElementById('contenedor-tabla-anuncios');
+
+    function filaAnuncio(a) {
+        const claseBadge = a.estaActivo ? 'badge-activo' : 'badge-inactivo';
+        const textoBadge = a.estaActivo ? 'activo' : 'inactivo';
+        const vence = a.fechaExpiracion ? formatearFecha(a.fechaExpiracion) : '—';
+        const accion = a.estaActivo
+            ? '<button class="btn-desactivar-anuncio secundario" data-id="' + a.idAnuncio + '">Desactivar</button>'
+            : '';
+
+        return '<tr>' +
+            '<td>#' + a.idAnuncio + '</td>' +
+            '<td><strong>' + escaparHtml(a.titulo) + '</strong><br><span style="color:var(--color-texto-suave);font-size:0.85rem;">' + escaparHtml(a.mensaje) + '</span></td>' +
+            '<td>' + formatearFecha(a.fechaCreacion) + '</td>' +
+            '<td>' + vence + '</td>' +
+            '<td><span class="badge ' + claseBadge + '">' + textoBadge + '</span></td>' +
+            '<td>' + accion + '</td>' +
+            '</tr>';
+    }
+
+    async function cargarAnunciosAdmin() {
+        try {
+            const anuncios = await apiFetch('/api/anuncios/todos');
+
+            contenedorTablaAnuncios.innerHTML = anuncios.length
+                ? '<div class="tabla-scroll"><table><thead><tr>' +
+                  '<th>ID</th><th>Título / mensaje</th><th>Creado</th><th>Vence</th><th>Estado</th><th></th>' +
+                  '</tr></thead><tbody>' + anuncios.map(filaAnuncio).join('') + '</tbody></table></div>'
+                : '<div class="vacio">Todavía no hay anuncios.</div>';
+
+            contenedorTablaAnuncios.querySelectorAll('.btn-desactivar-anuncio').forEach(function (boton) {
+                boton.addEventListener('click', async function () {
+                    boton.disabled = true;
+                    try {
+                        await apiFetch('/api/anuncios/' + boton.getAttribute('data-id') + '/desactivacion', { method: 'POST' });
+                        cargarAnunciosAdmin();
+                        cargarAnunciosActivos('banner-anuncios');
+                    } catch (error) {
+                        mostrarError(mensajeErrorAnuncio, error);
+                        boton.disabled = false;
+                    }
+                });
+            });
+        } catch (error) {
+            contenedorTablaAnuncios.innerHTML = '';
+            mostrarError(mensajeErrorAnuncio, error);
+        }
+    }
+
+    document.getElementById('form-anuncio').addEventListener('submit', async function (evento) {
+        evento.preventDefault();
+        ocultarMensaje(mensajeErrorAnuncio);
+
+        const btnPublicar = evento.target.querySelector('button[type="submit"]');
+        btnPublicar.disabled = true;
+        btnPublicar.textContent = 'Publicando...';
+
+        try {
+            const titulo = document.getElementById('titulo-anuncio').value.trim();
+            const mensaje = document.getElementById('mensaje-anuncio').value.trim();
+            const valorExpiracion = document.getElementById('expiracion-anuncio').value;
+
+            await apiFetch('/api/anuncios', {
+                method: 'POST',
+                body: JSON.stringify({
+                    titulo: titulo,
+                    mensaje: mensaje,
+                    fechaExpiracion: valorExpiracion ? new Date(valorExpiracion).toISOString() : null
+                })
+            });
+
+            document.getElementById('form-anuncio').reset();
+            cargarAnunciosAdmin();
+            cargarAnunciosActivos('banner-anuncios');
+        } catch (error) {
+            mostrarError(mensajeErrorAnuncio, error);
+        } finally {
+            btnPublicar.disabled = false;
+            btnPublicar.textContent = 'Publicar';
+        }
+    });
+
     // ---------- Utilidad compartida de paginacion ----------
 
     function renderizarPaginacion(pagina, contenedor, alCambiar) {
@@ -453,10 +638,12 @@
         if (btnSiguiente) btnSiguiente.addEventListener('click', function () { alCambiar(pagina.number + 1); });
     }
 
+    cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
     cargarCatalogos();
     cargarSolicitudes();
     cargarReportesPendientes();
     cargarClientes();
+    cargarAnunciosAdmin();
     activarNavegacionPorTabs();
 })();

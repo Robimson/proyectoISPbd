@@ -228,6 +228,14 @@ function activarNavegacionPorTabs() {
         secciones.forEach(function (seccion) {
             seccion.classList.toggle('oculto', seccion.id !== idObjetivo);
         });
+        // Paneles flotantes (panel-asignar, panel-rechazar, panel-reportar,
+        // panel-adjuntos...) no son parte del menu - se abren aparte al
+        // hacer clic en una fila. Si quedan abiertos y cambias de pestaña,
+        // se quedaban pegados arriba de la seccion nueva porque nadie los
+        // volvia a ocultar. Se cierran todos al cambiar de pestaña.
+        document.querySelectorAll('[id^="panel-"]').forEach(function (panel) {
+            panel.classList.add('oculto');
+        });
     }
 
     enlaces.forEach(function (enlace) {
@@ -394,6 +402,184 @@ function activarModalCambiarContrasena() {
 }
 
 /**
+ * Convierte un <input type="text"> + un <div> de sugerencias en un selector
+ * "buscable" que filtra EN EL CLIENTE sobre una lista ya cargada - sin ir al
+ * servidor por cada letra. Pensado para listas chicas (grupos técnicos,
+ * categorías, etc.), nunca para miles de registros: ahí lo que hace falta es
+ * buscar en el servidor, ver activarBusquedaRemota().
+ *
+ * Uso: const selector = activarSelectorBuscable('input-id', 'sugerencias-id');
+ * selector.setOpciones([{valor: '1', etiqueta: 'Grupo Alfa'}, ...]);
+ * selector.valor() -> el valor elegido, o null si todavía no eligió nada.
+ */
+function activarSelectorBuscable(idInput, idSugerencias) {
+    const input = document.getElementById(idInput);
+    const sugerencias = document.getElementById(idSugerencias);
+    let opciones = [];
+    let valorSeleccionado = null;
+
+    function coincidencias(termino) {
+        const t = termino.trim().toLowerCase();
+        return t ? opciones.filter(function (o) { return o.etiqueta.toLowerCase().includes(t); }) : opciones;
+    }
+
+    function render(lista) {
+        sugerencias.innerHTML = lista.length
+            ? lista.map(function (o) {
+                return '<button type="button" class="sugerencia-usuario" data-valor="' + o.valor + '">' + escaparHtml(o.etiqueta) + '</button>';
+            }).join('')
+            : '<div class="sugerencia-vacia">Sin coincidencias</div>';
+        sugerencias.classList.remove('oculto');
+    }
+
+    input.addEventListener('input', function () {
+        valorSeleccionado = null;
+        const termino = input.value.trim();
+        if (!termino) {
+            sugerencias.classList.add('oculto');
+            sugerencias.innerHTML = '';
+            return;
+        }
+        render(coincidencias(termino));
+    });
+
+    sugerencias.addEventListener('click', function (evento) {
+        const boton = evento.target.closest('[data-valor]');
+        if (!boton) return;
+        valorSeleccionado = boton.getAttribute('data-valor');
+        input.value = boton.textContent;
+        sugerencias.classList.add('oculto');
+    });
+
+    document.addEventListener('click', function (evento) {
+        if (evento.target !== input && !sugerencias.contains(evento.target)) {
+            sugerencias.classList.add('oculto');
+        }
+    });
+
+    return {
+        setOpciones: function (lista) { opciones = lista; },
+        valor: function () { return valorSeleccionado; },
+        limpiar: function () { input.value = ''; valorSeleccionado = null; sugerencias.classList.add('oculto'); }
+    };
+}
+
+/**
+ * Igual que activarSelectorBuscable(), pero para listas grandes: en vez de
+ * filtrar sobre una lista ya cargada, pide al servidor con un debounce de
+ * 300ms (para no mandar una petición por cada letra) usando la funcion
+ * `fnBuscar(termino)` que se le pasa. Cada resultado debe traer al menos
+ * {idUsuario, nombreUsuario, correo} (la forma que ya devuelven
+ * /api/tecnicos/buscar y /api/auditoria/usuarios/buscar).
+ */
+function activarBusquedaRemota(idInput, idSugerencias, fnBuscar, callbacks) {
+    const input = document.getElementById(idInput);
+    const sugerencias = document.getElementById(idSugerencias);
+    const onSeleccionar = (callbacks && callbacks.onSeleccionar) || function () {};
+    const onLimpiar = (callbacks && callbacks.onLimpiar) || function () {};
+    let valorSeleccionado = null;
+    let temporizador = null;
+
+    input.addEventListener('input', function () {
+        valorSeleccionado = null;
+        const termino = input.value.trim();
+        clearTimeout(temporizador);
+
+        if (termino.length < 2) {
+            sugerencias.classList.add('oculto');
+            sugerencias.innerHTML = '';
+            onLimpiar();
+            return;
+        }
+
+        temporizador = setTimeout(async function () {
+            try {
+                const resultados = await fnBuscar(termino);
+                sugerencias.innerHTML = resultados.length
+                    ? resultados.map(function (u) {
+                        return '<button type="button" class="sugerencia-usuario" data-id="' + u.idUsuario + '" data-nombre="' + escaparHtml(u.nombreUsuario) + '">' +
+                            '<strong>' + escaparHtml(u.nombreUsuario) + '</strong>' +
+                            '<span>#' + u.idUsuario + ' · ' + escaparHtml(u.correo) + '</span>' +
+                            '</button>';
+                    }).join('')
+                    : '<div class="sugerencia-vacia">Sin coincidencias</div>';
+                sugerencias.classList.remove('oculto');
+            } catch (error) {
+                console.error('No se pudo buscar:', error);
+            }
+        }, 300);
+    });
+
+    sugerencias.addEventListener('click', function (evento) {
+        const boton = evento.target.closest('.sugerencia-usuario');
+        if (!boton) return;
+        valorSeleccionado = boton.getAttribute('data-id');
+        input.value = boton.getAttribute('data-nombre') + ' (#' + valorSeleccionado + ')';
+        sugerencias.classList.add('oculto');
+        onSeleccionar(valorSeleccionado);
+    });
+
+    document.addEventListener('click', function (evento) {
+        if (evento.target !== input && !sugerencias.contains(evento.target)) {
+            sugerencias.classList.add('oculto');
+        }
+    });
+
+    return {
+        valor: function () { return valorSeleccionado; },
+        limpiar: function () { input.value = ''; valorSeleccionado = null; sugerencias.classList.add('oculto'); }
+    };
+}
+
+/**
+ * Abre un archivo protegido por JWT en una pestaña nueva sin que el
+ * navegador la bloquee como pop-up. La pestaña se abre EN BLANCO de
+ * inmediato, todavia ligada al clic real del usuario, y recien se redirige
+ * al archivo cuando el fetch con el header Authorization termina. Abrir la
+ * pestaña DESPUES del fetch (como se hacia antes) la desliga del clic
+ * original, y algunos navegadores la bloquean por eso.
+ */
+async function abrirArchivoConAutenticacion(rutaApi) {
+    const nuevaPestana = window.open('', '_blank');
+    if (!nuevaPestana) {
+        alert('El navegador bloqueó la nueva pestaña. Permite ventanas emergentes para este sitio.');
+        return;
+    }
+    nuevaPestana.document.write(
+        '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Abriendo archivo...</title></head>' +
+        '<body style="font-family:sans-serif;text-align:center;padding:40px;color:#334155;">' +
+        '<p>Abriendo archivo...</p></body></html>'
+    );
+
+    try {
+        const headers = {};
+        const token = obtenerToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const respuesta = await fetch(API_BASE + rutaApi, { headers: headers });
+
+        if (respuesta.status === 401) {
+            nuevaPestana.close();
+            limpiarSesion();
+            window.location.href = 'login.html';
+            return;
+        }
+        if (!respuesta.ok) {
+            throw new Error('No se pudo abrir el archivo (Error ' + respuesta.status + ').');
+        }
+
+        const blob = await respuesta.blob();
+        const urlBlob = URL.createObjectURL(blob);
+        nuevaPestana.location.href = urlBlob;
+        setTimeout(function () { URL.revokeObjectURL(urlBlob); }, 60000);
+    } catch (error) {
+        nuevaPestana.document.body.innerHTML =
+            '<p style="font-family:sans-serif;text-align:center;padding:40px;color:#b91c1c;">' +
+            escaparHtml(error.message || 'No se pudo abrir el archivo.') + '</p>';
+    }
+}
+
+/**
  * Conecta un panel de adjuntos (subir/listar/descargar evidencia) a los ids
  * que se le pasen en `config`. Se usa igual desde cliente.js y tecnico.js -
  * ambos roles pueden subir evidencia a una solicitud. Devuelve una funcion
@@ -429,13 +615,35 @@ function activarPanelAdjuntos(config) {
                     const icono = a.tipoArchivo === 'application/pdf' ? '📄' : '🖼️';
                     return '<li style="display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--color-borde);">' +
                         '<span>' + icono + ' ' + escaparHtml(a.nombreArchivo) + '</span>' +
-                        '<a href="' + API_BASE + '/api/adjuntos/' + a.idAdjunto + '/archivo" target="_blank" rel="noopener">Ver / descargar</a>' +
+                        '<button type="button" class="secundario btn-ver-adjunto" data-id="' + a.idAdjunto + '">Ver / descargar</button>' +
                         '</li>';
                 }).join('') + '</ul>';
+
+            listaDiv.querySelectorAll('.btn-ver-adjunto').forEach(function (boton) {
+                boton.addEventListener('click', function () { abrirArchivoAdjunto(boton); });
+            });
         } catch (error) {
             listaDiv.innerHTML = '';
             mostrarError(mensajeError, error);
         }
+    }
+
+    /**
+     * Un <a href> normal no manda el token JWT (eso solo lo hace fetch con
+     * el header Authorization) - por eso se delega en
+     * abrirArchivoConAutenticacion(), que pide el archivo con fetch y lo
+     * abre como blob, en vez de navegar directo a la URL del backend.
+     */
+    async function abrirArchivoAdjunto(boton) {
+        const idAdjunto = boton.getAttribute('data-id');
+        const textoOriginal = boton.textContent;
+        boton.disabled = true;
+        boton.textContent = 'Abriendo...';
+
+        await abrirArchivoConAutenticacion('/api/adjuntos/' + idAdjunto + '/archivo');
+
+        boton.disabled = false;
+        boton.textContent = textoOriginal;
     }
 
     form.addEventListener('submit', async function (evento) {
@@ -498,4 +706,28 @@ function activarPanelAdjuntos(config) {
         panel.scrollIntoView({ behavior: 'smooth' });
         cargarLista();
     };
+}
+
+/**
+ * Carga y muestra los anuncios globales activos (banner arriba de cada
+ * panel) - se llama igual desde los 4 roles, todos los ven. GET /api/anuncios
+ * ya filtra por esta_activo=true y no vencidos, asi que aca solo se dibuja
+ * lo que venga.
+ */
+async function cargarAnunciosActivos(idContenedor) {
+    const contenedor = document.getElementById(idContenedor);
+    if (!contenedor) return;
+
+    try {
+        const anuncios = await apiFetch('/api/anuncios');
+
+        contenedor.innerHTML = anuncios.map(function (a) {
+            return '<div class="banner-anuncio">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>' +
+                '<div><strong>' + escaparHtml(a.titulo) + '</strong><br>' + escaparHtml(a.mensaje) + '</div>' +
+                '</div>';
+        }).join('');
+    } catch (error) {
+        console.error('No se pudieron cargar los anuncios:', error);
+    }
 }
