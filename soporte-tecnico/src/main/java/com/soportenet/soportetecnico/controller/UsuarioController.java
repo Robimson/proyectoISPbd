@@ -74,13 +74,14 @@ public class UsuarioController {
         String enlace = urlFrontend + "/activar.html?token=" + token;
         emailService.enviar(
                 request.getCorreo(),
-                "Invitacion a SoporteNet",
+                "Te invitaron a unirte",
                 "Hola " + request.getNombreUsuario() + ",\n\n" +
-                        "Te invitaron a SoporteNet. Activa tu cuenta y define tu contrasena aqui:\n" +
-                        enlace + "\n\n" +
-                        "Si el link no abre, entra a " + urlFrontend + "/activar.html y pega este token:\n" +
+                        "Te invitaron a formar parte del sistema. Activá tu cuenta y definí tu contraseña con el botón de abajo.\n\n" +
+                        "Si el botón no funciona, entrá a " + urlFrontend + "/activar.html y pegá este token:\n" +
                         token + "\n\n" +
-                        "Este token vence en " + diasValidez + " dia(s)."
+                        "Este token vence en " + diasValidez + " día(s).",
+                enlace,
+                "Activar mi cuenta"
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)

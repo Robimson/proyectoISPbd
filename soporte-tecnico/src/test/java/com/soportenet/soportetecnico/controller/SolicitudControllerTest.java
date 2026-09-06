@@ -2,6 +2,8 @@ package com.soportenet.soportetecnico.controller;
 
 import com.soportenet.soportetecnico.entity.Cliente;
 import com.soportenet.soportetecnico.entity.Solicitud;
+import com.soportenet.soportetecnico.repository.AsignacionSolicitudRepository;
+import com.soportenet.soportetecnico.repository.ReporteSolicitudRepository;
 import com.soportenet.soportetecnico.repository.SolicitudRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,16 @@ class SolicitudControllerTest {
     @BeforeEach
     void configurar() {
         solicitudRepository = Mockito.mock(SolicitudRepository.class);
-        solicitudController = new SolicitudController(solicitudRepository);
+        // detalleDe() los usa para armar la asignacion vigente y el
+        // historial de reportes del detalle - sin datos de por medio en
+        // estos tests, Mockito ya devuelve Optional.empty()/List vacia por
+        // defecto para estos tipos, asi que no hace falta stubearlos.
+        AsignacionSolicitudRepository asignacionSolicitudRepository =
+                Mockito.mock(AsignacionSolicitudRepository.class);
+        ReporteSolicitudRepository reporteSolicitudRepository =
+                Mockito.mock(ReporteSolicitudRepository.class);
+        solicitudController = new SolicitudController(
+                solicitudRepository, asignacionSolicitudRepository, reporteSolicitudRepository);
     }
 
     private Authentication autenticacionComo(Long idUsuario, String rol) {

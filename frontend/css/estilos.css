@@ -17,6 +17,7 @@
     --color-peligro: #dc2626;
     --color-peligro-suave: #fef2f2;
     --color-exito: #16a34a;
+    --color-advertencia: #d97706;
     --radio: 10px;
     --radio-lg: 16px;
     --sombra: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
@@ -447,6 +448,10 @@ button:disabled {
     stroke: currentColor;
 }
 
+#btn-abrir-configuracion svg {
+    stroke: currentColor;
+}
+
 .sidebar-nav a:hover {
     background: var(--color-fondo);
     color: var(--color-texto);
@@ -712,10 +717,124 @@ tbody tr:hover {
     line-height: 1.1;
 }
 
+.tarjeta-metrica .valor.valor-atencion { color: var(--color-advertencia); }
+.tarjeta-metrica .valor.valor-alerta { color: var(--color-peligro); }
+
 .tarjeta-metrica .etiqueta {
     color: var(--color-texto-suave);
     font-size: 0.82rem;
     margin-top: 4px;
+}
+
+/* ---------- Graficos del dashboard (barras y dona, sin libreria) ---------- */
+
+.fila-graficos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+}
+
+.tarjeta-grafico {
+    background: var(--color-superficie);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-lg);
+    padding: 18px 20px;
+    box-shadow: var(--sombra);
+}
+
+.tarjeta-grafico h3 {
+    margin: 0 0 14px;
+    font-size: 0.95rem;
+}
+
+.grafico-barras {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fila-barra {
+    display: grid;
+    grid-template-columns: 112px 1fr 30px;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+}
+
+.etiqueta-barra {
+    color: var(--color-texto-suave);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pista-barra {
+    background: var(--color-fondo);
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.relleno-barra {
+    background: var(--color-primario);
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.valor-barra {
+    font-weight: 700;
+    text-align: right;
+}
+
+.grafico-dona-contenedor {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.grafico-dona {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.grafico-dona::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 60px;
+    height: 60px;
+    background: var(--color-superficie);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.leyenda-dona {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.82rem;
+    flex: 1;
+    min-width: 140px;
+}
+
+.fila-leyenda-dona {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.punto-leyenda {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 /* ---------- Spinner de carga ---------- */
@@ -772,6 +891,12 @@ tbody tr:hover {
    queda apretado - ej: editar grupo, evidencias. */
 .modal-ancho {
     max-width: 560px;
+}
+
+/* Para modales con tablas de varias columnas (ej: Anuncios) donde incluso
+   .modal-ancho obliga a hacer scroll horizontal. */
+.modal-ancho-xl {
+    max-width: 760px;
 }
 
 .lista-miembros-grupo {

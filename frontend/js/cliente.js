@@ -1,4 +1,5 @@
 (function () {
+    aplicarConfiguracionSistema();
     if (!exigirSesion('CLIENTE')) return;
 
     document.getElementById('texto-usuario').textContent = 'Cliente #' + obtenerIdUsuario();
@@ -19,9 +20,9 @@
 
     async function cargarMetricas() {
         filaMetricas.innerHTML =
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Pendientes</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">En proceso</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Cerradas</div></div>';
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">🕐 Pendientes</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">🔧 En proceso</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">✅ Cerradas</div></div>';
 
         try {
             const [pendientes, enProceso, cerradas] = await Promise.all([
@@ -31,11 +32,25 @@
             ]);
 
             filaMetricas.innerHTML =
-                '<div class="tarjeta-metrica"><div class="valor">' + pendientes.totalElements + '</div><div class="etiqueta">Pendientes</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + enProceso.totalElements + '</div><div class="etiqueta">En proceso</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + cerradas.totalElements + '</div><div class="etiqueta">Cerradas</div></div>';
+                '<div class="tarjeta-metrica"><div class="valor">' + pendientes.totalElements + '</div><div class="etiqueta">🕐 Pendientes</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + enProceso.totalElements + '</div><div class="etiqueta">🔧 En proceso</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + cerradas.totalElements + '</div><div class="etiqueta">✅ Cerradas</div></div>';
         } catch (error) {
             console.error('No se pudieron cargar las métricas:', error);
+        }
+    }
+
+    async function cargarGraficos() {
+        const contenedorEstado = document.getElementById('grafico-mis-solicitudes-estado');
+        const contenedorCategoria = document.getElementById('grafico-mis-solicitudes-categoria');
+        try {
+            const estadisticas = await apiFetch('/api/solicitudes/mis-estadisticas');
+            contenedorEstado.innerHTML = graficoDona(estadisticas.porEstado);
+            contenedorCategoria.innerHTML = graficoBarras(estadisticas.porCategoria);
+        } catch (error) {
+            console.error('No se pudieron cargar los gráficos:', error);
+            contenedorEstado.innerHTML = '';
+            contenedorCategoria.innerHTML = '';
         }
     }
 
@@ -95,15 +110,14 @@
 
     function filaSolicitud(s) {
         const claseBadge = claseBadgeEstado(s.estado);
-        let acciones = s.estado !== 'Cerrada'
-            ? '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>'
-            : '';
+        let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-ver-detalle secundario btn-compacto">Ver detalles</button>';
+        if (s.estado !== 'Cerrada') {
+            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario btn-compacto">Adjuntos</button>';
+        }
         if (s.estado === 'Resuelta - Pendiente Confirmación del Cliente') {
             acciones +=
-                ' <div class="acciones-fila" style="display:inline-flex;">' +
-                '<button data-id="' + s.idSolicitud + '" data-resuelto="true" class="btn-confirmar">Sí, quedó resuelto</button>' +
-                '<button data-id="' + s.idSolicitud + '" data-resuelto="false" class="btn-confirmar secundario">Sigue el problema</button>' +
-                '</div>';
+                ' <button data-id="' + s.idSolicitud + '" data-resuelto="true" class="btn-confirmar btn-compacto">Sí, quedó resuelto</button>' +
+                '<button data-id="' + s.idSolicitud + '" data-resuelto="false" class="btn-confirmar secundario btn-compacto">Sigue el problema</button>';
         }
         return '<tr>' +
             '<td>#' + s.idSolicitud + '</td>' +
@@ -111,7 +125,7 @@
             '<td><span class="badge ' + claseBadge + '">' + escaparHtml(s.estado) + '</span></td>' +
             '<td>' + escaparHtml(s.prioridad || '—') + '</td>' +
             '<td>' + formatearFecha(s.fechaCreacion) + '</td>' +
-            '<td>' + acciones + '</td>' +
+            '<td><div class="acciones-fila">' + acciones + '</div></td>' +
             '</tr>';
     }
 
@@ -145,6 +159,9 @@
             });
             contenedorTabla.querySelectorAll('.btn-adjuntos').forEach(function (boton) {
                 boton.addEventListener('click', function () { abrirAdjuntos(boton.getAttribute('data-id')); });
+            });
+            contenedorTabla.querySelectorAll('.btn-ver-detalle').forEach(function (boton) {
+                boton.addEventListener('click', function () { abrirModalDetalleSolicitud(boton.getAttribute('data-id')); });
             });
         } catch (error) {
             contenedorTabla.innerHTML = '';
@@ -186,6 +203,54 @@
         }
     }
 
+    // El input nativo <input type="file" multiple> REEMPLAZA toda la
+    // seleccion cada vez que se abre el dialogo - no la suma. Eso es normal
+    // en todos los navegadores (no un bug), pero como UX confunde: el
+    // usuario espera poder ir agregando de a un archivo. Por eso se
+    // acumulan en este arreglo propio en vez de leer input.files
+    // directamente al enviar el formulario.
+    let archivosNuevaSolicitud = [];
+    const inputAdjuntosNueva = document.getElementById('adjuntos-nueva-solicitud');
+    const listaAdjuntosNueva = document.getElementById('lista-adjuntos-nueva-solicitud');
+
+    function renderizarAdjuntosNuevaSolicitud() {
+        if (!archivosNuevaSolicitud.length) {
+            listaAdjuntosNueva.innerHTML = '';
+            listaAdjuntosNueva.classList.add('oculto');
+            return;
+        }
+        listaAdjuntosNueva.classList.remove('oculto');
+        listaAdjuntosNueva.innerHTML = archivosNuevaSolicitud.map(function (archivo, indice) {
+            return '<div class="fila-miembro-grupo">' +
+                '<span>' + escaparHtml(archivo.name) + '</span>' +
+                '<button type="button" class="secundario btn-compacto btn-quitar-adjunto-nuevo" data-indice="' + indice + '">Quitar</button>' +
+                '</div>';
+        }).join('');
+        listaAdjuntosNueva.querySelectorAll('.btn-quitar-adjunto-nuevo').forEach(function (boton) {
+            boton.addEventListener('click', function () {
+                archivosNuevaSolicitud.splice(Number(boton.getAttribute('data-indice')), 1);
+                renderizarAdjuntosNuevaSolicitud();
+            });
+        });
+    }
+
+    inputAdjuntosNueva.addEventListener('change', function () {
+        ocultarMensaje(mensajeErrorCrear);
+        Array.from(inputAdjuntosNueva.files).forEach(function (archivo) {
+            const yaEstaba = archivosNuevaSolicitud.some(function (a) { return a.name === archivo.name && a.size === archivo.size; });
+            if (!yaEstaba) archivosNuevaSolicitud.push(archivo);
+        });
+        // Se limpia el input para que el proximo dialogo arranque vacio -
+        // la lista propia de abajo es la que manda, no el input nativo.
+        inputAdjuntosNueva.value = '';
+
+        if (archivosNuevaSolicitud.length > 5) {
+            mostrarError(mensajeErrorCrear, new Error('Podés adjuntar hasta 5 archivos - se ignoraron los que sobraban.'));
+            archivosNuevaSolicitud = archivosNuevaSolicitud.slice(0, 5);
+        }
+        renderizarAdjuntosNuevaSolicitud();
+    });
+
     document.getElementById('form-crear').addEventListener('submit', async function (evento) {
         evento.preventDefault();
         ocultarMensaje(mensajeErrorCrear);
@@ -198,8 +263,9 @@
             const descripcion = document.getElementById('descripcion').value.trim();
             const direccion = document.getElementById('direccion').value.trim();
             const idCategoriaValor = document.getElementById('categoria').value;
+            const archivos = archivosNuevaSolicitud;
 
-            await apiFetch('/api/solicitudes', {
+            const creada = await apiFetch('/api/solicitudes', {
                 method: 'POST',
                 body: JSON.stringify({
                     descripcion: descripcion,
@@ -208,10 +274,30 @@
                 })
             });
 
+            // La solicitud ya quedo creada aunque alguna evidencia falle al
+            // subir - perder el ticket por eso seria peor que avisar aparte,
+            // asi que el error de un adjunto no bloquea la creacion.
+            if (archivos.length) {
+                btnCrear.textContent = 'Subiendo evidencia...';
+                const resultados = await Promise.allSettled(
+                    archivos.map(function (archivo) { return subirAdjunto(creada.idSolicitud, archivo); })
+                );
+                const fallidos = resultados.filter(function (r) { return r.status === 'rejected'; });
+                if (fallidos.length) {
+                    mostrarError(mensajeErrorCrear, new Error(
+                        'La solicitud #' + creada.idSolicitud + ' se creó, pero ' + fallidos.length +
+                        ' archivo(s) no se pudieron subir. Podés agregarlos después con el botón "Adjuntos" en la lista.'
+                    ));
+                }
+            }
+
             document.getElementById('form-crear').reset();
             // El reset() del form tambien vacia direccion; se vuelve a poner
             // porque ya quedo guardada como "ultima conocida" en el servidor.
             document.getElementById('direccion').value = direccion;
+            // reset() no vacia el arreglo propio de adjuntos acumulados.
+            archivosNuevaSolicitud = [];
+            renderizarAdjuntosNuevaSolicitud();
             paginaActual = 0;
             cargarSolicitudes();
         } catch (error) {
@@ -229,6 +315,7 @@
 
     cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
+    cargarGraficos();
     cargarCategorias();
     cargarEstados();
     cargarDireccionSugerida();

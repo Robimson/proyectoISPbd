@@ -9,7 +9,7 @@
 <body>
     <div class="app-shell">
         <aside class="sidebar">
-            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet" class="logo-negocio"></span> <span class="nombre-negocio-texto">SoporteNet</span></div>
             <span class="sidebar-rol">Cliente</span>
             <nav class="sidebar-nav">
                 <a href="#resumen">
@@ -35,15 +35,24 @@
         <main class="contenido-principal">
             <h1>Mis solicitudes</h1>
 
-            <div id="banner-anuncios"></div>
-
             <div class="banner-alerta oculto" id="banner-moroso">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a1 1 0 00.86 1.5h18.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0z"/></svg>
                 <span>Tu cuenta tiene un pago pendiente. Por favor regulariza tu situación para evitar inconvenientes con el servicio.</span>
             </div>
 
             <div class="seccion" id="resumen">
+                <div id="banner-anuncios"></div>
                 <div class="fila-metricas" id="fila-metricas"></div>
+                <div class="fila-graficos">
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Mis solicitudes por estado</h3>
+                        <div id="grafico-mis-solicitudes-estado">Cargando...</div>
+                    </div>
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Mis solicitudes por categoría</h3>
+                        <div id="grafico-mis-solicitudes-categoria">Cargando...</div>
+                    </div>
+                </div>
             </div>
 
             <div class="seccion tarjeta" id="nueva-solicitud">
@@ -64,6 +73,12 @@
                         <select id="categoria">
                             <option value="">Sin especificar</option>
                         </select>
+                    </div>
+                    <div class="campo">
+                        <label for="adjuntos-nueva-solicitud">Evidencia (opcional)</label>
+                        <input type="file" id="adjuntos-nueva-solicitud" multiple accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                        <p class="subtitulo" style="margin-top: 4px;">Fotos o PDF, máximo 10MB cada uno, hasta 5 archivos. Podés elegirlos de a uno: cada archivo se va sumando a la lista.</p>
+                        <div id="lista-adjuntos-nueva-solicitud" class="lista-miembros-grupo oculto" style="margin-top: 8px;"></div>
                     </div>
                     <button type="submit" id="btn-crear">Crear solicitud</button>
                 </form>

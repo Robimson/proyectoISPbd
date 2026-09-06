@@ -9,7 +9,7 @@
 <body>
     <div class="app-shell">
         <aside class="sidebar">
-            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet" class="logo-negocio"></span> <span class="nombre-negocio-texto">SoporteNet</span></div>
             <span class="sidebar-rol">Superusuario</span>
             <nav class="sidebar-nav">
                 <a href="#resumen">
@@ -41,12 +41,30 @@
         </aside>
 
         <main class="contenido-principal">
-            <h1>Panel de superusuario</h1>
-
-            <div id="banner-anuncios"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>Panel de superusuario</h1>
+                <button type="button" class="secundario" id="btn-abrir-configuracion" title="Configuración del sistema" aria-label="Configuración del sistema" style="padding: 8px; border-radius: 999px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                </button>
+            </div>
 
             <div class="seccion" id="resumen">
+                <div id="banner-anuncios"></div>
                 <div class="fila-metricas" id="fila-metricas"></div>
+                <div class="fila-graficos">
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Técnicos por nivel</h3>
+                        <div id="grafico-tecnicos-nivel">Cargando...</div>
+                    </div>
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Usuarios por rol</h3>
+                        <div id="grafico-usuarios-rol">Cargando...</div>
+                    </div>
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Miembros por grupo técnico</h3>
+                        <div id="grafico-miembros-grupo">Cargando...</div>
+                    </div>
+                </div>
             </div>
 
             <div class="seccion tarjeta" id="invitar">

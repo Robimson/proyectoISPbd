@@ -31,17 +31,9 @@ public interface AdjuntoRepository extends JpaRepository<Adjunto, Long> {
 
     /**
      * true si idUsuario es el cliente dueno de la solicitud, o el tecnico
-     * actualmente asignado (directo o por su grupo vigente). Se usa para
-     * autorizar listar/descargar adjuntos sin duplicar toda la logica de
-     * asignacion en Java.
+     * actualmente asignado (directo o por su grupo vigente), via
+     * fn_puede_acceder_a_solicitud().
      */
-    @Query(value = "SELECT EXISTS (" +
-            "SELECT 1 FROM solicitud WHERE id_solicitud = :idSolicitud AND id_cliente = :idUsuario " +
-            "UNION ALL " +
-            "SELECT 1 FROM asignacion_solicitud WHERE id_solicitud = :idSolicitud AND vigente = true AND id_tecnico = :idUsuario " +
-            "UNION ALL " +
-            "SELECT 1 FROM asignacion_solicitud a JOIN tecnico_grupo tg ON tg.id_grupo = a.id_grupo " +
-            "WHERE a.id_solicitud = :idSolicitud AND a.vigente = true AND tg.id_usuario = :idUsuario" +
-            ")", nativeQuery = true)
+    @Query(value = "SELECT fn_puede_acceder_a_solicitud(:idSolicitud, :idUsuario)", nativeQuery = true)
     boolean puedeAccederASolicitud(@Param("idSolicitud") Long idSolicitud, @Param("idUsuario") Long idUsuario);
 }

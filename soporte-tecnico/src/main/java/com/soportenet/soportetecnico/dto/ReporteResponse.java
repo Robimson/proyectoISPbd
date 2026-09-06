@@ -13,18 +13,20 @@ public class ReporteResponse {
     private final Long idReporte;
     private final Long idSolicitud;
     private final Long idTecnico;
+    private final String tecnicoNombre;
     private final String detalleReporte;
     private final String estadoAprobacion;
     private final OffsetDateTime fechaEnvio;
     private final OffsetDateTime fechaRevision;
     private final String comentarioRechazo;
 
-    public ReporteResponse(Long idReporte, Long idSolicitud, Long idTecnico, String detalleReporte,
-                            String estadoAprobacion, OffsetDateTime fechaEnvio, OffsetDateTime fechaRevision,
-                            String comentarioRechazo) {
+    public ReporteResponse(Long idReporte, Long idSolicitud, Long idTecnico, String tecnicoNombre,
+                            String detalleReporte, String estadoAprobacion, OffsetDateTime fechaEnvio,
+                            OffsetDateTime fechaRevision, String comentarioRechazo) {
         this.idReporte = idReporte;
         this.idSolicitud = idSolicitud;
         this.idTecnico = idTecnico;
+        this.tecnicoNombre = tecnicoNombre;
         this.detalleReporte = detalleReporte;
         this.estadoAprobacion = estadoAprobacion;
         this.fechaEnvio = fechaEnvio;
@@ -37,6 +39,8 @@ public class ReporteResponse {
                 r.getIdReporte(),
                 r.getSolicitud() != null ? r.getSolicitud().getIdSolicitud() : null,
                 r.getTecnico() != null ? r.getTecnico().getIdUsuario() : null,
+                (r.getTecnico() != null && r.getTecnico().getUsuario() != null)
+                        ? r.getTecnico().getUsuario().getNombreUsuario() : null,
                 r.getDetalleReporte(),
                 r.getEstadoAprobacion() != null ? r.getEstadoAprobacion().name() : null,
                 r.getFechaEnvio(),
@@ -55,6 +59,10 @@ public class ReporteResponse {
 
     public Long getIdTecnico() {
         return idTecnico;
+    }
+
+    public String getTecnicoNombre() {
+        return tecnicoNombre;
     }
 
     public String getDetalleReporte() {

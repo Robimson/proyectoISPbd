@@ -1,4 +1,5 @@
 (function () {
+    aplicarConfiguracionSistema();
     const form = document.getElementById('form-recuperar');
     const mensajeError = document.getElementById('mensaje-error');
     const mensajeExito = document.getElementById('mensaje-exito');

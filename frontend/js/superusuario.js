@@ -1,4 +1,5 @@
 (function () {
+    aplicarConfiguracionSistema();
     if (!exigirSesion('SUPERUSUARIO')) return;
 
     document.getElementById('texto-usuario').textContent = 'Superusuario #' + obtenerIdUsuario();
@@ -12,10 +13,10 @@
 
     async function cargarMetricas() {
         filaMetricas.innerHTML =
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Usuarios totales</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Clientes</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Técnicos</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Grupos técnicos</div></div>';
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">👥 Usuarios totales</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">🧑 Clientes</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">🛠️ Técnicos</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">📁 Grupos técnicos</div></div>';
 
         try {
             const [total, clientes, tecnicos, grupos] = await Promise.all([
@@ -26,12 +27,37 @@
             ]);
 
             filaMetricas.innerHTML =
-                '<div class="tarjeta-metrica"><div class="valor">' + total.totalElements + '</div><div class="etiqueta">Usuarios totales</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + clientes.totalElements + '</div><div class="etiqueta">Clientes</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + tecnicos.totalElements + '</div><div class="etiqueta">Técnicos</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + grupos.length + '</div><div class="etiqueta">Grupos técnicos</div></div>';
+                '<div class="tarjeta-metrica"><div class="valor">' + total.totalElements + '</div><div class="etiqueta">👥 Usuarios totales</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + clientes.totalElements + '</div><div class="etiqueta">🧑 Clientes</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + tecnicos.totalElements + '</div><div class="etiqueta">🛠️ Técnicos</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + grupos.length + '</div><div class="etiqueta">📁 Grupos técnicos</div></div>';
         } catch (error) {
             console.error('No se pudieron cargar las métricas:', error);
+        }
+    }
+
+    async function cargarGraficos() {
+        const contenedorNivel = document.getElementById('grafico-tecnicos-nivel');
+        const contenedorRol = document.getElementById('grafico-usuarios-rol');
+        const contenedorGrupos = document.getElementById('grafico-miembros-grupo');
+        try {
+            const [estadisticas, grupos] = await Promise.all([
+                apiFetch('/api/dashboard/superusuario'),
+                // "Miembros por grupo" ya viene con el conteo en este mismo
+                // endpoint (GrupoTecnicoConteoProjection) - no hace falta un
+                // endpoint aparte solo para el grafico.
+                apiFetch('/api/grupos-tecnicos')
+            ]);
+            contenedorNivel.innerHTML = graficoDona(estadisticas.tecnicosPorNivel);
+            contenedorRol.innerHTML = graficoDona(estadisticas.usuariosPorRol);
+            contenedorGrupos.innerHTML = graficoBarras(grupos.map(function (g) {
+                return { etiqueta: g.nombreGrupo, valor: g.totalTecnicos };
+            }));
+        } catch (error) {
+            console.error('No se pudieron cargar los gráficos:', error);
+            contenedorNivel.innerHTML = '';
+            contenedorRol.innerHTML = '';
+            contenedorGrupos.innerHTML = '';
         }
     }
 
@@ -388,6 +414,7 @@
                         try {
                             await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros/' + boton.getAttribute('data-id'), { method: 'DELETE' });
                             cargarMiembros();
+                            cargarGraficos();
                         } catch (error) {
                             mostrarError(mensajeError, error);
                             boton.disabled = false;
@@ -418,6 +445,7 @@
             vistaAgregar.classList.add('oculto');
             vistaMiembros.classList.remove('oculto');
             cargarMiembros();
+            cargarGraficos();
         }
 
         overlay.querySelector('#btn-ir-a-agregar').addEventListener('click', irAVistaAgregar);
@@ -656,8 +684,188 @@
         if (btnSiguiente) btnSiguiente.addEventListener('click', function () { alCambiar(pagina.number + 1); });
     }
 
+    // ---------- Configuracion del sistema (nombre/logo/color de marca) ----------
+    // No es algo que se toque a diario (a lo sumo cuando el negocio cambia
+    // de nombre o quiere personalizar colores), por eso vive detras del
+    // icono de engranaje en vez de una pestana fija del menu.
+
+    function abrirModalConfiguracion() {
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-modal';
+        overlay.innerHTML =
+            '<div class="modal">' +
+            '<h3>Configuración del sistema</h3>' +
+            '<div id="mensaje-error-configuracion" class="mensaje-error oculto"></div>' +
+            '<div id="mensaje-exito-configuracion" class="mensaje-info oculto"></div>' +
+
+            '<div class="campo">' +
+            '<label>Logo</label>' +
+            '<div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">' +
+            '<img id="logo-configuracion-preview" src="" alt="Logo actual" style="max-height:48px; max-width:120px; object-fit:contain; display:none;">' +
+            '<span id="logo-configuracion-vacio" class="subtitulo" style="margin:0;">Usando el logo por defecto.</span>' +
+            '</div>' +
+            '<input type="file" id="input-logo-configuracion" accept="image/png">' +
+            '<button type="button" id="btn-subir-logo-configuracion" class="secundario" style="margin-top:8px;">Subir logo</button>' +
+            '</div>' +
+
+            '<form id="form-configuracion">' +
+            '<div class="campo">' +
+            '<label for="nombre-negocio-input">Nombre del negocio</label>' +
+            '<input type="text" id="nombre-negocio-input" required maxlength="150">' +
+            '</div>' +
+            '<div class="campo">' +
+            '<label for="categoria-input">Categoría (debajo del logo)</label>' +
+            '<input type="text" id="categoria-input" required maxlength="150">' +
+            '</div>' +
+            '<div class="campo">' +
+            '<label for="eslogan-input">Eslogan (pantalla de inicio de sesión)</label>' +
+            '<textarea id="eslogan-input" required maxlength="300"></textarea>' +
+            '</div>' +
+            '<div class="campo">' +
+            '<label for="color-primario-input">Color de marca</label>' +
+            '<input type="color" id="color-primario-input" style="width:60px; height:36px; padding:2px; cursor:pointer;">' +
+            '</div>' +
+            '<div class="modal-acciones">' +
+            '<button type="button" class="secundario" data-accion="cerrar">Cerrar</button>' +
+            '<button type="submit">Guardar</button>' +
+            '</div>' +
+            '</form>' +
+            '</div>';
+
+        function cerrar() {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', alPresionarTecla);
+        }
+
+        function alPresionarTecla(evento) {
+            if (evento.key === 'Escape') cerrar();
+        }
+
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', function (evento) {
+            if (evento.target === overlay) cerrar();
+        });
+        overlay.querySelector('[data-accion="cerrar"]').addEventListener('click', cerrar);
+        document.addEventListener('keydown', alPresionarTecla);
+
+        const mensajeError = overlay.querySelector('#mensaje-error-configuracion');
+        const mensajeExito = overlay.querySelector('#mensaje-exito-configuracion');
+        const imgPreview = overlay.querySelector('#logo-configuracion-preview');
+        const spanVacio = overlay.querySelector('#logo-configuracion-vacio');
+        const inputNombre = overlay.querySelector('#nombre-negocio-input');
+        const inputCategoria = overlay.querySelector('#categoria-input');
+        const inputEslogan = overlay.querySelector('#eslogan-input');
+        const inputColor = overlay.querySelector('#color-primario-input');
+
+        async function cargarConfiguracionActual() {
+            try {
+                const respuesta = await fetch(API_BASE + '/api/configuracion');
+                const config = await respuesta.json();
+
+                inputNombre.value = config.nombreNegocio || '';
+                inputCategoria.value = config.categoria || '';
+                inputEslogan.value = config.eslogan || '';
+                inputColor.value = config.colorPrimario || '#0d9488';
+
+                if (config.logoUrl) {
+                    const version = config.fechaModificacion ? '?v=' + encodeURIComponent(config.fechaModificacion) : '';
+                    imgPreview.src = API_BASE + config.logoUrl + version;
+                    imgPreview.style.display = '';
+                    spanVacio.style.display = 'none';
+                } else {
+                    imgPreview.style.display = 'none';
+                    spanVacio.style.display = '';
+                }
+            } catch (error) {
+                mostrarError(mensajeError, error);
+            }
+        }
+
+        overlay.querySelector('#btn-subir-logo-configuracion').addEventListener('click', async function () {
+            const boton = this;
+            const inputArchivo = overlay.querySelector('#input-logo-configuracion');
+            const archivo = inputArchivo.files[0];
+            if (!archivo) {
+                mostrarError(mensajeError, new Error('Elegí un archivo primero.'));
+                return;
+            }
+
+            ocultarMensaje(mensajeError);
+            ocultarMensaje(mensajeExito);
+            boton.disabled = true;
+            boton.textContent = 'Subiendo...';
+
+            try {
+                const datosFormulario = new FormData();
+                datosFormulario.append('archivo', archivo);
+
+                const headers = {};
+                const token = obtenerToken();
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+
+                const respuesta = await fetch(API_BASE + '/api/configuracion/logo', {
+                    method: 'POST',
+                    headers: headers,
+                    body: datosFormulario
+                });
+
+                if (!respuesta.ok) {
+                    const cuerpo = await respuesta.json().catch(function () { return null; });
+                    throw new Error((cuerpo && cuerpo.error) || 'No se pudo subir el logo.');
+                }
+
+                inputArchivo.value = '';
+                await cargarConfiguracionActual();
+                aplicarConfiguracionSistema();
+                mensajeExito.textContent = 'Logo actualizado.';
+                mensajeExito.classList.remove('oculto');
+            } catch (error) {
+                mostrarError(mensajeError, error);
+            } finally {
+                boton.disabled = false;
+                boton.textContent = 'Subir logo';
+            }
+        });
+
+        overlay.querySelector('#form-configuracion').addEventListener('submit', async function (evento) {
+            evento.preventDefault();
+            ocultarMensaje(mensajeError);
+            ocultarMensaje(mensajeExito);
+
+            const btnGuardar = evento.target.querySelector('button[type="submit"]');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+
+            try {
+                await apiFetch('/api/configuracion', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        nombreNegocio: inputNombre.value.trim(),
+                        categoria: inputCategoria.value.trim(),
+                        eslogan: inputEslogan.value.trim(),
+                        colorPrimario: inputColor.value
+                    })
+                });
+
+                aplicarConfiguracionSistema();
+                mensajeExito.textContent = 'Configuración guardada.';
+                mensajeExito.classList.remove('oculto');
+            } catch (error) {
+                mostrarError(mensajeError, error);
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar';
+            }
+        });
+
+        cargarConfiguracionActual();
+    }
+
+    document.getElementById('btn-abrir-configuracion').addEventListener('click', abrirModalConfiguracion);
+
     cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
+    cargarGraficos();
     cargarUsuarios();
     cargarGrupos();
     cargarResumenAuditoria();

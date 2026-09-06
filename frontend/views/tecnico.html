@@ -9,7 +9,7 @@
 <body>
     <div class="app-shell">
         <aside class="sidebar">
-            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet"></span> SoporteNet</div>
+            <div class="sidebar-marca"><span class="logo"><img src="../css/logo.png" alt="SoporteNet" class="logo-negocio"></span> <span class="nombre-negocio-texto">SoporteNet</span></div>
             <span class="sidebar-rol">Técnico</span>
             <nav class="sidebar-nav">
                 <a href="#resumen">
@@ -31,10 +31,19 @@
         <main class="contenido-principal">
             <h1>Mis tareas</h1>
 
-            <div id="banner-anuncios"></div>
-
             <div class="seccion" id="resumen">
+                <div id="banner-anuncios"></div>
                 <div class="fila-metricas" id="fila-metricas"></div>
+                <div class="fila-graficos">
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Mis tareas por prioridad</h3>
+                        <div id="grafico-mis-tareas-prioridad">Cargando...</div>
+                    </div>
+                    <div class="tarjeta tarjeta-grafico">
+                        <h3>Mis reportes: aprobados vs rechazados</h3>
+                        <div id="grafico-mis-reportes">Cargando...</div>
+                    </div>
+                </div>
             </div>
 
             <div class="tarjeta oculto" id="panel-reportar">

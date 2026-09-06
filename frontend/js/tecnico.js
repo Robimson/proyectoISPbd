@@ -1,4 +1,5 @@
 (function () {
+    aplicarConfiguracionSistema();
     if (!exigirSesion('TECNICO')) return;
 
     document.getElementById('texto-usuario').textContent = 'Técnico #' + obtenerIdUsuario();
@@ -19,20 +20,34 @@
 
     async function cargarMetricas() {
         filaMetricas.innerHTML =
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">En proceso</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Pendiente aprobación</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Resueltas hoy</div></div>' +
-            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">Total cerradas</div></div>';
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">🔧 En proceso</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">📨 Pendiente aprobación</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">✅ Resueltas hoy</div></div>' +
+            '<div class="tarjeta-metrica"><div class="valor">—</div><div class="etiqueta">📁 Total cerradas</div></div>';
 
         try {
             const r = await apiFetch('/api/solicitudes/mis-tareas/resumen');
             filaMetricas.innerHTML =
-                '<div class="tarjeta-metrica"><div class="valor">' + r.enProceso + '</div><div class="etiqueta">En proceso</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + r.pendienteAprobacion + '</div><div class="etiqueta">Pendiente aprobación</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + r.resueltasHoy + '</div><div class="etiqueta">Resueltas hoy</div></div>' +
-                '<div class="tarjeta-metrica"><div class="valor">' + r.totalCerradas + '</div><div class="etiqueta">Total cerradas</div></div>';
+                '<div class="tarjeta-metrica"><div class="valor">' + r.enProceso + '</div><div class="etiqueta">🔧 En proceso</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.pendienteAprobacion + '</div><div class="etiqueta">📨 Pendiente aprobación</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.resueltasHoy + '</div><div class="etiqueta">✅ Resueltas hoy</div></div>' +
+                '<div class="tarjeta-metrica"><div class="valor">' + r.totalCerradas + '</div><div class="etiqueta">📁 Total cerradas</div></div>';
         } catch (error) {
             console.error('No se pudieron cargar las métricas:', error);
+        }
+    }
+
+    async function cargarGraficos() {
+        const contenedorPrioridad = document.getElementById('grafico-mis-tareas-prioridad');
+        const contenedorReportes = document.getElementById('grafico-mis-reportes');
+        try {
+            const estadisticas = await apiFetch('/api/solicitudes/mis-tareas/estadisticas');
+            contenedorPrioridad.innerHTML = graficoBarras(estadisticas.porPrioridad);
+            contenedorReportes.innerHTML = graficoDona(estadisticas.misReportes);
+        } catch (error) {
+            console.error('No se pudieron cargar los gráficos:', error);
+            contenedorPrioridad.innerHTML = '';
+            contenedorReportes.innerHTML = '';
         }
     }
 
@@ -49,11 +64,12 @@
 
     function filaSolicitud(s) {
         const claseBadge = claseBadgeEstado(s.estado);
-        let acciones = s.estado !== 'Cerrada'
-            ? '<button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario">Adjuntos</button>'
-            : '';
+        let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-ver-detalle secundario btn-compacto">Ver detalles</button>';
+        if (s.estado !== 'Cerrada') {
+            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario btn-compacto">Adjuntos</button>';
+        }
         if (s.estado === 'En Proceso') {
-            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-reportar">Reportar solución</button>';
+            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-reportar btn-compacto">Reportar solución</button>';
         }
         return '<tr>' +
             '<td>#' + s.idSolicitud + '</td>' +
@@ -62,7 +78,7 @@
             '<td><span class="badge ' + claseBadge + '">' + escaparHtml(s.estado) + '</span></td>' +
             '<td>' + escaparHtml(s.prioridad || '—') + '</td>' +
             '<td>' + formatearFecha(s.fechaCreacion) + '</td>' +
-            '<td>' + acciones + '</td>' +
+            '<td><div class="acciones-fila">' + acciones + '</div></td>' +
             '</tr>';
     }
 
@@ -109,6 +125,9 @@
             });
             contenedorTabla.querySelectorAll('.btn-adjuntos').forEach(function (boton) {
                 boton.addEventListener('click', function () { abrirAdjuntos(boton.getAttribute('data-id')); });
+            });
+            contenedorTabla.querySelectorAll('.btn-ver-detalle').forEach(function (boton) {
+                boton.addEventListener('click', function () { abrirModalDetalleSolicitud(boton.getAttribute('data-id')); });
             });
         } catch (error) {
             contenedorTabla.innerHTML = '';
@@ -179,6 +198,7 @@
 
     cargarAnunciosActivos('banner-anuncios');
     cargarMetricas();
+    cargarGraficos();
     cargarEstados();
     cargarMisTareas();
     activarNavegacionPorTabs();

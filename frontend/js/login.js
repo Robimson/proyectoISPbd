@@ -1,4 +1,6 @@
 (function () {
+    aplicarConfiguracionSistema();
+
     // Si ya hay sesion activa, saltar directo al panel del rol.
     const rolActual = obtenerRol();
     if (obtenerToken() && rolActual && PAGINA_POR_ROL[rolActual]) {

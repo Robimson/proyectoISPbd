@@ -1,4 +1,5 @@
 (function () {
+    aplicarConfiguracionSistema();
     activarAlternarContrasena();
 
     const form = document.getElementById('form-restablecer');

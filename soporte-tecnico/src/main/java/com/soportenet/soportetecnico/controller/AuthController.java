@@ -136,12 +136,14 @@ public class AuthController {
             String enlace = urlFrontend + "/restablecer.html?token=" + token;
             emailService.enviar(
                     request.getCorreo(),
-                    "Recupera tu contrasena en SoporteNet",
-                    "Pediste restablecer tu contrasena. Este enlace vence en "
-                            + HORAS_VALIDEZ_TOKEN_RECUPERACION + " hora(s):\n\n" + enlace + "\n\n" +
-                            "Si el link no abre, entra a " + urlFrontend + "/restablecer.html y pega este token:\n" +
+                    "Recupera tu contraseña",
+                    "Pediste restablecer tu contraseña. Este enlace vence en "
+                            + HORAS_VALIDEZ_TOKEN_RECUPERACION + " hora(s).\n\n" +
+                            "Si el botón no funciona, entrá a " + urlFrontend + "/restablecer.html y pegá este token:\n" +
                             token + "\n\n" +
-                            "Si no fuiste tu quien lo pidio, ignora este correo."
+                            "Si no fuiste vos quien lo pidió, ignorá este correo.",
+                    enlace,
+                    "Restablecer contraseña"
             );
         }
 

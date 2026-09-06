@@ -1,5 +1,6 @@
 package com.soportenet.soportetecnico.repository;
 
+import com.soportenet.soportetecnico.dto.ConteoProjection;
 import com.soportenet.soportetecnico.dto.UsuarioBusquedaProjection;
 import com.soportenet.soportetecnico.entity.Usuario;
 import com.soportenet.soportetecnico.enums.RolUsuario;
@@ -112,4 +113,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      */
     @Query(value = "SELECT * FROM fn_buscar_usuarios(:termino, 'tecnico')", nativeQuery = true)
     List<UsuarioBusquedaProjection> buscarTecnicos(@Param("termino") String termino);
+
+    /** Superusuario: cuantos usuarios hay de cada rol, via fn_conteo_usuarios_rol(). */
+    @Query(value = "SELECT * FROM fn_conteo_usuarios_rol()", nativeQuery = true)
+    List<ConteoProjection> contarPorRol();
 }

@@ -2,12 +2,20 @@ package com.soportenet.soportetecnico.controller;
 
 import com.soportenet.soportetecnico.dto.ConfirmarClienteRequest;
 import com.soportenet.soportetecnico.dto.CrearSolicitudRequest;
+import com.soportenet.soportetecnico.dto.EstadisticasClienteResponse;
+import com.soportenet.soportetecnico.dto.EstadisticasTecnicoResponse;
+import com.soportenet.soportetecnico.dto.ReporteResponse;
 import com.soportenet.soportetecnico.dto.ResumenTecnicoProjection;
+import com.soportenet.soportetecnico.dto.SolicitudDetalleResponse;
 import com.soportenet.soportetecnico.dto.SolicitudResponse;
+import com.soportenet.soportetecnico.entity.AsignacionSolicitud;
 import com.soportenet.soportetecnico.entity.Solicitud;
+import com.soportenet.soportetecnico.repository.AsignacionSolicitudRepository;
+import com.soportenet.soportetecnico.repository.ReporteSolicitudRepository;
 import com.soportenet.soportetecnico.repository.SolicitudRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -18,23 +26,26 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/solicitudes")
 public class SolicitudController {
 
     private final SolicitudRepository solicitudRepository;
+    private final AsignacionSolicitudRepository asignacionSolicitudRepository;
+    private final ReporteSolicitudRepository reporteSolicitudRepository;
 
-    public SolicitudController(SolicitudRepository solicitudRepository) {
+    public SolicitudController(SolicitudRepository solicitudRepository,
+                                AsignacionSolicitudRepository asignacionSolicitudRepository,
+                                ReporteSolicitudRepository reporteSolicitudRepository) {
         this.solicitudRepository = solicitudRepository;
+        this.asignacionSolicitudRepository = asignacionSolicitudRepository;
+        this.reporteSolicitudRepository = reporteSolicitudRepository;
     }
 
-    /**
-     * Cliente crea una nueva solicitud de soporte.
-     * Toda la logica de negocio vive en PostgreSQL mediante
-     * sp_crear_solicitud.
-     *
-     * El idCliente se obtiene del JWT y no del body.
-     */
+    /** Cliente crea una solicitud; la logica vive en sp_crear_solicitud. idCliente sale del JWT. */
     @PostMapping
     @Transactional
     public ResponseEntity<SolicitudResponse> crear(
@@ -60,21 +71,9 @@ public class SolicitudController {
                 .body(SolicitudResponse.fromEntity(creada));
     }
 
-    /**
-     * Consulta el detalle de una solicitud.
-     *
-     * ADMINISTRADOR y SUPERUSUARIO:
-     * pueden consultar cualquier solicitud.
-     *
-     * CLIENTE:
-     * solamente puede consultar sus propias solicitudes.
-     *
-     * TECNICO:
-     * solamente puede consultar solicitudes asignadas a el
-     * directo, o a un grupo del que es miembro.
-     */
+    /** Detalle de una solicitud: admin/superusuario ven cualquiera, cliente solo la suya, tecnico solo si tiene acceso. */
     @GetMapping("/{id}")
-    public ResponseEntity<SolicitudResponse> obtener(
+    public ResponseEntity<SolicitudDetalleResponse> obtener(
             @PathVariable Long id,
             Authentication authentication) {
 
@@ -85,24 +84,14 @@ public class SolicitudController {
             return ResponseEntity.notFound().build();
         }
 
-        /*
-         * Administrador y Superusuario pueden consultar
-         * cualquier solicitud.
-         */
         if (tieneRol(authentication, "ADMINISTRADOR")
                 || tieneRol(authentication, "SUPERUSUARIO")) {
 
-            return ResponseEntity.ok(
-                    SolicitudResponse.fromEntity(solicitud)
-            );
+            return ResponseEntity.ok(detalleDe(solicitud));
         }
 
         Long idUsuario = Long.valueOf(authentication.getName());
 
-        /*
-         * Cliente:
-         * solamente puede consultar solicitudes que le pertenecen.
-         */
         if (tieneRol(authentication, "CLIENTE")) {
 
             if (solicitud.getCliente() != null
@@ -111,9 +100,7 @@ public class SolicitudController {
                     .getIdUsuario()
                     .equals(idUsuario)) {
 
-                return ResponseEntity.ok(
-                        SolicitudResponse.fromEntity(solicitud)
-                );
+                return ResponseEntity.ok(detalleDe(solicitud));
             }
 
             return ResponseEntity
@@ -121,21 +108,13 @@ public class SolicitudController {
                     .build();
         }
 
-        /*
-         * Tecnico:
-         * puede consultar la solicitud si esta asignada
-         * directamente a el, o a un grupo del que es miembro
-         * (solo cuenta la asignacion vigente).
-         */
         if (tieneRol(authentication, "TECNICO")) {
 
             boolean tieneAcceso =
                     solicitudRepository.tecnicoTieneAcceso(id, idUsuario);
 
             if (tieneAcceso) {
-                return ResponseEntity.ok(
-                        SolicitudResponse.fromEntity(solicitud)
-                );
+                return ResponseEntity.ok(detalleDe(solicitud));
             }
 
             return ResponseEntity
@@ -143,12 +122,24 @@ public class SolicitudController {
                     .build();
         }
 
-        /*
-         * Cualquier otro rol no autorizado.
-         */
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .build();
+    }
+
+    /** Arma el detalle: entidad + asignacion vigente + historial de reportes. Adjuntos van aparte (GET .../adjuntos). */
+    private SolicitudDetalleResponse detalleDe(Solicitud solicitud) {
+        AsignacionSolicitud asignacionVigente = asignacionSolicitudRepository
+                .findBySolicitudIdSolicitudAndVigenteTrue(solicitud.getIdSolicitud())
+                .orElse(null);
+
+        List<ReporteResponse> reportes = reporteSolicitudRepository
+                .findBySolicitudIdSolicitudOrderByFechaEnvioDesc(solicitud.getIdSolicitud())
+                .stream()
+                .map(ReporteResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return SolicitudDetalleResponse.construir(solicitud, asignacionVigente, reportes);
     }
 
     /**
@@ -176,10 +167,18 @@ public class SolicitudController {
         if (tieneRol(authentication, "ADMINISTRADOR")
                 || tieneRol(authentication, "SUPERUSUARIO")) {
 
+            // El admin ve una cola de trabajo, no un feed cronologico - ver
+            // el comentario en SolicitudRepository.findTodasOrdenadoParaAdmin.
+            // El orden ya queda fijo en esa consulta nativa, asi que aca se
+            // ignora el sort que trae el Pageable (el de @PageableDefault
+            // abajo es para el Cliente) y solo se reusan pagina/tamano.
+            Pageable paginaSinOrden = PageRequest.of(
+                    pageable.getPageNumber(), pageable.getPageSize());
+
             pagina = (estado != null)
                     ? solicitudRepository
-                    .findByEstadoNombreEstado(estado, pageable)
-                    : solicitudRepository.findAll(pageable);
+                    .findPorEstadoOrdenadoParaAdmin(estado, paginaSinOrden)
+                    : solicitudRepository.findTodasOrdenadoParaAdmin(paginaSinOrden);
 
         } else {
 
@@ -244,6 +243,38 @@ public class SolicitudController {
         return ResponseEntity.ok(
                 solicitudRepository.resumenTecnico(idTecnico)
         );
+    }
+
+    /**
+     * Cliente: datos para los graficos de su "Resumen" (sus solicitudes por
+     * estado y por categoria).
+     */
+    @GetMapping("/mis-estadisticas")
+    public ResponseEntity<EstadisticasClienteResponse> misEstadisticas(
+            Authentication authentication) {
+
+        Long idCliente = Long.valueOf(authentication.getName());
+
+        return ResponseEntity.ok(new EstadisticasClienteResponse(
+                solicitudRepository.contarPorEstadoCliente(idCliente),
+                solicitudRepository.contarPorCategoriaCliente(idCliente)
+        ));
+    }
+
+    /**
+     * Tecnico: datos para los graficos de su "Resumen" (sus tareas vigentes
+     * por prioridad y su propia tasa de aprobacion de reportes).
+     */
+    @GetMapping("/mis-tareas/estadisticas")
+    public ResponseEntity<EstadisticasTecnicoResponse> misTareasEstadisticas(
+            Authentication authentication) {
+
+        Long idTecnico = Long.valueOf(authentication.getName());
+
+        return ResponseEntity.ok(new EstadisticasTecnicoResponse(
+                solicitudRepository.contarPorPrioridadTecnico(idTecnico),
+                reporteSolicitudRepository.contarAprobacionTecnico(idTecnico)
+        ));
     }
 
     /**
