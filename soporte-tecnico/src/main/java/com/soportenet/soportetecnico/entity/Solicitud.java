@@ -48,6 +48,12 @@ public class Solicitud {
     @Column(name = "direccion", length = 255)
     private String direccion;
 
+    @Column(name = "lat")
+    private Double lat;
+
+    @Column(name = "lng")
+    private Double lng;
+
     // Bloqueo optimista: OJO, aqui NO se usa @Version de JPA a proposito.
     // El trigger fn_pre_update_solicitud() ya incrementa esta columna en la BD
     // y rechaza el UPDATE si NEW.version llega distinto de OLD.version.
@@ -133,6 +139,22 @@ public class Solicitud {
 
     public void setDireccion(String direccion) {
         this.direccion = direccion;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLng() {
+        return lng;
+    }
+
+    public void setLng(Double lng) {
+        this.lng = lng;
     }
 
     public Integer getVersion() {

@@ -31,14 +31,14 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
      * antes de moverla a la base - no se pierde el rendimiento.
      */
     @Query(value = "SELECT * FROM fn_todas_ordenado_admin()",
-           countQuery = "SELECT fn_todas_ordenado_admin_conteo()",
-           nativeQuery = true)
+            countQuery = "SELECT fn_todas_ordenado_admin_conteo()",
+            nativeQuery = true)
     Page<Solicitud> findTodasOrdenadoParaAdmin(Pageable pageable);
 
     /** Igual que findTodasOrdenadoParaAdmin(), filtrado por estado (caso de uso 4.3.3). */
     @Query(value = "SELECT * FROM fn_por_estado_ordenado_admin(:estado)",
-           countQuery = "SELECT fn_por_estado_ordenado_admin_conteo(:estado)",
-           nativeQuery = true)
+            countQuery = "SELECT fn_por_estado_ordenado_admin_conteo(:estado)",
+            nativeQuery = true)
     Page<Solicitud> findPorEstadoOrdenadoParaAdmin(@Param("estado") String estado, Pageable pageable);
 
     /**
@@ -49,8 +49,8 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
      * que antes de moverla a la base.
      */
     @Query(value = "SELECT * FROM fn_mis_tareas(:idTecnico, :estado)",
-           countQuery = "SELECT fn_mis_tareas_conteo(:idTecnico, :estado)",
-           nativeQuery = true)
+            countQuery = "SELECT fn_mis_tareas_conteo(:idTecnico, :estado)",
+            nativeQuery = true)
     Page<Solicitud> findMisTareas(@Param("idTecnico") Long idTecnico, @Param("estado") String estado, Pageable pageable);
 
     /**
@@ -65,20 +65,23 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     /**
      * Invoca sp_crear_solicitud(...) directamente en PostgreSQL.
      * Toda la validacion (cliente existe, cuenta activa, descripcion no vacia,
-     * categoria valida, direccion no vacia) ya vive en la funcion de la base
-     * de datos; aqui solo la llamamos y devolvemos el id generado. La
-     * prioridad no se recibe: la establece el Administrador al asignar
-     * (sp_asignar_solicitud). Si direccion viene null (no deberia, el DTO ya
-     * la exige), el procedimiento cae de vuelta a la ultima direccion
-     * conocida del cliente.
+     * categoria valida, direccion no vacia, rango de lat/lng) ya vive en la
+     * funcion de la base de datos; aqui solo la llamamos y devolvemos el id
+     * generado. La prioridad no se recibe: la establece el Administrador al
+     * asignar (sp_asignar_solicitud). Si direccion viene null, el
+     * procedimiento cae de vuelta a la ultima direccion conocida del
+     * cliente. lat/lng son opcionales (pueden venir null si el cliente
+     * escribio la direccion a mano en vez de usar el mapa).
      */
-    @Query(value = "SELECT sp_crear_solicitud(:idCliente, :descripcion, :idCategoria, :direccion)",
-           nativeQuery = true)
+    @Query(value = "SELECT sp_crear_solicitud(:idCliente, :descripcion, :idCategoria, :direccion, :lat, :lng)",
+            nativeQuery = true)
     Long crearSolicitud(
             @Param("idCliente") Long idCliente,
             @Param("descripcion") String descripcion,
             @Param("idCategoria") Integer idCategoria,
-            @Param("direccion") String direccion
+            @Param("direccion") String direccion,
+            @Param("lat") Double lat,
+            @Param("lng") Double lng
     );
 
     /**
@@ -89,7 +92,7 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
      * procedimiento, aqui solo lo invocamos.
      */
     @Query(value = "SELECT sp_asignar_solicitud(:idSolicitud, :idAdministrador, :idTecnico, :idGrupo, :idPrioridad, :motivoReasignacion)",
-           nativeQuery = true)
+            nativeQuery = true)
     void asignarSolicitud(
             @Param("idSolicitud") Long idSolicitud,
             @Param("idAdministrador") Long idAdministrador,
@@ -102,12 +105,12 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     /**
      * Invoca sp_confirmar_cliente(...) directamente en PostgreSQL. Valida
      * que el cliente sea el dueno de la solicitud, que su cuenta este activa
-     * y que el ticket este en "Resuelta - Pendiente Confirmacion del
+     * y que el ticket este en "Resuelta - Pendiente Confirmación del
      * Cliente". Si problemaResuelto es true cierra el ticket; si es false lo
      * regresa a "En Proceso" y notifica al tecnico vigente.
      */
     @Query(value = "SELECT sp_confirmar_cliente(:idSolicitud, :idCliente, :problemaResuelto)",
-           nativeQuery = true)
+            nativeQuery = true)
     void confirmarCliente(
             @Param("idSolicitud") Long idSolicitud,
             @Param("idCliente") Long idCliente,
@@ -122,7 +125,7 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
      * solicitud Cerrada) solo para esta operacion.
      */
     @Query(value = "SELECT sp_reabrir_ticket_cerrado_administrativo(:idSolicitud, :idAdministrador)",
-           nativeQuery = true)
+            nativeQuery = true)
     void reabrirTicketCerrado(
             @Param("idSolicitud") Long idSolicitud,
             @Param("idAdministrador") Long idAdministrador

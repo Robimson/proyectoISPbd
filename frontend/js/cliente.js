@@ -251,6 +251,87 @@
         renderizarAdjuntosNuevaSolicitud();
     });
 
+    // ---------- Selector de dirección con mapa ----------
+    let mapaSelector, marcadorSelector, ultimaSeleccionMapa = null;
+    const overlayMapa = document.getElementById('overlay-mapa');
+    const previewDireccionMapa = document.getElementById('preview-direccion-mapa');
+    const btnConfirmarMapa = document.getElementById('btn-confirmar-mapa');
+    const CENTRO_INICIAL_MAPA = [-2.170998, -79.922359]; // Ajustar a la ciudad de tus clientes
+
+    document.getElementById('btn-abrir-mapa').addEventListener('click', function () {
+        overlayMapa.classList.remove('oculto');
+        if (!mapaSelector) {
+            mapaSelector = L.map('mapa-selector').setView(CENTRO_INICIAL_MAPA, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(mapaSelector);
+            mapaSelector.on('click', function (e) { marcarPuntoMapa(e.latlng.lat, e.latlng.lng); });
+        } else {
+            setTimeout(function () { mapaSelector.invalidateSize(); }, 50);
+        }
+    });
+
+    document.getElementById('btn-cerrar-mapa').addEventListener('click', function () {
+        overlayMapa.classList.add('oculto');
+    });
+
+    document.getElementById('btn-buscar-mapa').addEventListener('click', buscarDireccionMapa);
+    document.getElementById('buscador-mapa').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); buscarDireccionMapa(); }
+    });
+
+    document.getElementById('btn-mi-ubicacion').addEventListener('click', function () {
+        if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización.'); return; }
+        navigator.geolocation.getCurrentPosition(
+            function (pos) { marcarPuntoMapa(pos.coords.latitude, pos.coords.longitude); },
+            function () { alert('No se pudo obtener tu ubicación. Revisá los permisos del navegador.'); }
+        );
+    });
+
+    btnConfirmarMapa.addEventListener('click', function () {
+        if (!ultimaSeleccionMapa) return;
+        document.getElementById('direccion').value = ultimaSeleccionMapa.direccionTexto;
+        document.getElementById('lat').value = ultimaSeleccionMapa.lat;
+        document.getElementById('lng').value = ultimaSeleccionMapa.lng;
+        overlayMapa.classList.add('oculto');
+    });
+
+    async function marcarPuntoMapa(lat, lng) {
+        if (marcadorSelector) mapaSelector.removeLayer(marcadorSelector);
+        marcadorSelector = L.marker([lat, lng]).addTo(mapaSelector);
+        mapaSelector.setView([lat, lng], mapaSelector.getZoom() < 15 ? 16 : mapaSelector.getZoom());
+        previewDireccionMapa.textContent = 'Buscando dirección...';
+        btnConfirmarMapa.disabled = true;
+        try {
+            const resp = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng);
+            const data = await resp.json();
+            const texto = data.display_name || ('Lat ' + lat.toFixed(6) + ', Lng ' + lng.toFixed(6));
+            ultimaSeleccionMapa = { lat: lat, lng: lng, direccionTexto: texto };
+            previewDireccionMapa.textContent = texto;
+        } catch (error) {
+            ultimaSeleccionMapa = { lat: lat, lng: lng, direccionTexto: 'Lat ' + lat.toFixed(6) + ', Lng ' + lng.toFixed(6) };
+            previewDireccionMapa.textContent = ultimaSeleccionMapa.direccionTexto;
+        }
+        btnConfirmarMapa.disabled = false;
+    }
+
+    async function buscarDireccionMapa() {
+        const q = document.getElementById('buscador-mapa').value.trim();
+        if (!q) return;
+        try {
+            const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) + '&limit=1');
+            const data = await resp.json();
+            if (data.length === 0) {
+                previewDireccionMapa.textContent = 'No se encontró esa dirección. Probá con más detalle o marcá el punto en el mapa.';
+                return;
+            }
+            marcarPuntoMapa(parseFloat(data[0].lat), parseFloat(data[0].lon));
+        } catch (error) {
+            previewDireccionMapa.textContent = 'Ocurrió un error buscando la dirección.';
+        }
+    }
+
     document.getElementById('form-crear').addEventListener('submit', async function (evento) {
         evento.preventDefault();
         ocultarMensaje(mensajeErrorCrear);
@@ -260,17 +341,14 @@
         btnCrear.textContent = 'Creando...';
 
         try {
-            const descripcion = document.getElementById('descripcion').value.trim();
-            const direccion = document.getElementById('direccion').value.trim();
-            const idCategoriaValor = document.getElementById('categoria').value;
-            const archivos = archivosNuevaSolicitud;
-
             const creada = await apiFetch('/api/solicitudes', {
                 method: 'POST',
                 body: JSON.stringify({
                     descripcion: descripcion,
                     idCategoria: idCategoriaValor ? Number(idCategoriaValor) : null,
-                    direccion: direccion
+                    direccion: direccion,
+                    lat: document.getElementById('lat').value ? Number(document.getElementById('lat').value) : null,
+                    lng: document.getElementById('lng').value ? Number(document.getElementById('lng').value) : null
                 })
             });
 

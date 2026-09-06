@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis solicitudes — SoporteNet</title>
     <link rel="stylesheet" href="../css/estilos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 <body>
     <div class="app-shell">
@@ -60,14 +61,16 @@
                 <div id="mensaje-error-crear" class="mensaje-error oculto"></div>
                 <form id="form-crear">
                     <div class="campo">
-                        <label for="descripcion">Descripción del problema</label>
-                        <textarea id="descripcion" required placeholder="Describe qué está pasando..."></textarea>
-                    </div>
-                    <div class="campo">
                         <label for="direccion">Dirección del servicio</label>
-                        <input type="text" id="direccion" required placeholder="Calle, número, sector/referencia...">
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="direccion" required placeholder="Calle, número, sector/referencia..." style="flex:1;">
+                            <button type="button" class="secundario" id="btn-abrir-mapa" style="white-space:nowrap;">📍 Elegir en el mapa</button>
+                        </div>
                         <p class="subtitulo" style="margin-top: 4px;">Es la dirección a donde iría el técnico. Se precarga con la última que usaste, pero podés cambiarla si el problema es en otra propiedad.</p>
+                        <input type="hidden" id="lat">
+                        <input type="hidden" id="lng">
                     </div>
+
                     <div class="campo" style="max-width: 300px;">
                         <label for="categoria">Categoría (opcional)</label>
                         <select id="categoria">
@@ -116,6 +119,25 @@
             </div>
         </main>
     </div>
+
+    <div class="overlay-modal oculto" id="overlay-mapa">
+        <div class="modal modal-ancho">
+            <h3>Elegir ubicación del servicio</h3>
+            <div style="display:flex; gap:8px; margin: 12px 0;">
+                <input type="text" id="buscador-mapa" placeholder="Buscar dirección o sector..." style="flex:1; padding:10px 12px; border:1px solid var(--color-borde); border-radius:var(--radio);">
+                <button type="button" class="secundario" id="btn-buscar-mapa">Buscar</button>
+            </div>
+            <div id="mapa-selector" style="width:100%; height:320px; border-radius:var(--radio); border:1px solid var(--color-borde);"></div>
+            <button type="button" class="secundario btn-compacto" id="btn-mi-ubicacion" style="margin-top:10px;">Usar mi ubicación actual</button>
+            <p class="subtitulo" id="preview-direccion-mapa" style="margin-top:14px;">Hacé clic en el mapa para marcar el punto.</p>
+            <div class="modal-acciones">
+                <button type="button" class="secundario" id="btn-cerrar-mapa">Cancelar</button>
+                <button type="button" id="btn-confirmar-mapa" disabled>Usar esta dirección</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
     <script src="../js/api.js"></script>
     <script src="../js/cliente.js"></script>
