@@ -19,10 +19,16 @@ public class ReporteResponse {
     private final OffsetDateTime fechaEnvio;
     private final OffsetDateTime fechaRevision;
     private final String comentarioRechazo;
+    private final String solicitudDescripcion;
+    private final String solicitudDireccion;
+    private final String solicitudCategoria;
+    private final String solicitudPrioridad;
 
     public ReporteResponse(Long idReporte, Long idSolicitud, Long idTecnico, String tecnicoNombre,
                             String detalleReporte, String estadoAprobacion, OffsetDateTime fechaEnvio,
-                            OffsetDateTime fechaRevision, String comentarioRechazo) {
+                            OffsetDateTime fechaRevision, String comentarioRechazo,
+                            String solicitudDescripcion, String solicitudDireccion,
+                            String solicitudCategoria, String solicitudPrioridad) {
         this.idReporte = idReporte;
         this.idSolicitud = idSolicitud;
         this.idTecnico = idTecnico;
@@ -32,12 +38,17 @@ public class ReporteResponse {
         this.fechaEnvio = fechaEnvio;
         this.fechaRevision = fechaRevision;
         this.comentarioRechazo = comentarioRechazo;
+        this.solicitudDescripcion = solicitudDescripcion;
+        this.solicitudDireccion = solicitudDireccion;
+        this.solicitudCategoria = solicitudCategoria;
+        this.solicitudPrioridad = solicitudPrioridad;
     }
 
     public static ReporteResponse fromEntity(ReporteSolicitud r) {
+        var solicitud = r.getSolicitud();
         return new ReporteResponse(
                 r.getIdReporte(),
-                r.getSolicitud() != null ? r.getSolicitud().getIdSolicitud() : null,
+                solicitud != null ? solicitud.getIdSolicitud() : null,
                 r.getTecnico() != null ? r.getTecnico().getIdUsuario() : null,
                 (r.getTecnico() != null && r.getTecnico().getUsuario() != null)
                         ? r.getTecnico().getUsuario().getNombreUsuario() : null,
@@ -45,7 +56,11 @@ public class ReporteResponse {
                 r.getEstadoAprobacion() != null ? r.getEstadoAprobacion().name() : null,
                 r.getFechaEnvio(),
                 r.getFechaRevision(),
-                r.getComentarioRechazo()
+                r.getComentarioRechazo(),
+                solicitud != null ? solicitud.getDescripcion() : null,
+                solicitud != null ? solicitud.getDireccion() : null,
+                (solicitud != null && solicitud.getCategoria() != null) ? solicitud.getCategoria().getNombreCategoria() : null,
+                (solicitud != null && solicitud.getPrioridad() != null) ? solicitud.getPrioridad().getNombrePrioridad() : null
         );
     }
 
@@ -83,5 +98,21 @@ public class ReporteResponse {
 
     public String getComentarioRechazo() {
         return comentarioRechazo;
+    }
+
+    public String getSolicitudDescripcion() {
+        return solicitudDescripcion;
+    }
+
+    public String getSolicitudDireccion() {
+        return solicitudDireccion;
+    }
+
+    public String getSolicitudCategoria() {
+        return solicitudCategoria;
+    }
+
+    public String getSolicitudPrioridad() {
+        return solicitudPrioridad;
     }
 }

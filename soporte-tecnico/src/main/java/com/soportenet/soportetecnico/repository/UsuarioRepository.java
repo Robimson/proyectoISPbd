@@ -76,10 +76,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query(value = "SELECT * FROM fn_buscar_usuarios(:termino)", nativeQuery = true)
     List<UsuarioBusquedaProjection> buscarUsuarios(@Param("termino") String termino);
 
-    
-    @Query(value = "SELECT * FROM fn_buscar_usuarios(:termino, 'tecnico')", nativeQuery = true)
-    List<UsuarioBusquedaProjection> buscarTecnicos(@Param("termino") String termino);
-
     /** Superusuario: cuantos usuarios hay de cada rol, via fn_conteo_usuarios_rol(). */
     @Query(value = "SELECT * FROM fn_conteo_usuarios_rol()", nativeQuery = true)
     List<ConteoProjection> contarPorRol();

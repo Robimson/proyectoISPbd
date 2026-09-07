@@ -12,6 +12,8 @@ public class SolicitudDetalleResponse {
     private final Long idSolicitud;
     private final String descripcion;
     private final String direccion;
+    private final Double lat;
+    private final Double lng;
     private final String categoria;
     private final OffsetDateTime fechaCreacion;
     private final String estado;
@@ -32,7 +34,8 @@ public class SolicitudDetalleResponse {
 
     private final List<ReporteResponse> reportes;
 
-    public SolicitudDetalleResponse(Long idSolicitud, String descripcion, String direccion, String categoria,
+    public SolicitudDetalleResponse(Long idSolicitud, String descripcion, String direccion, Double lat, Double lng,
+                                     String categoria,
                                      OffsetDateTime fechaCreacion, String estado, String prioridad,
                                      OffsetDateTime fechaLimiteConfirmacion, Integer version,
                                      String clienteNombre, String clienteCorreo, String clienteEstadoPago,
@@ -43,6 +46,8 @@ public class SolicitudDetalleResponse {
         this.idSolicitud = idSolicitud;
         this.descripcion = descripcion;
         this.direccion = direccion;
+        this.lat = lat;
+        this.lng = lng;
         this.categoria = categoria;
         this.fechaCreacion = fechaCreacion;
         this.estado = estado;
@@ -71,6 +76,8 @@ public class SolicitudDetalleResponse {
                 s.getIdSolicitud(),
                 s.getDescripcion(),
                 s.getDireccion(),
+                s.getLat(),
+                s.getLng(),
                 s.getCategoria() != null ? s.getCategoria().getNombreCategoria() : null,
                 s.getFechaCreacion(),
                 s.getEstado() != null ? s.getEstado().getNombreEstado() : null,
@@ -105,6 +112,14 @@ public class SolicitudDetalleResponse {
 
     public String getDireccion() {
         return direccion;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public Double getLng() {
+        return lng;
     }
 
     public String getCategoria() {

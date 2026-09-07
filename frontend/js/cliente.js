@@ -198,6 +198,10 @@
                 body: JSON.stringify({ problemaResuelto: resuelto })
             });
             cargarSolicitudes();
+            mostrarToast(
+                resuelto ? 'Gracias por confirmar, la solicitud quedó cerrada.' : 'Confirmado: el problema sigue sin resolverse, se reabre la solicitud.',
+                'exito'
+            );
         } catch (error) {
             mostrarError(mensajeErrorLista, error);
             boton.disabled = false;
@@ -378,6 +382,7 @@
             setTimeout(function () {
                 mensajeExitoCrear.classList.add('oculto');
             }, 4000);
+            mostrarToast('Solicitud #' + creada.idSolicitud + ' creada correctamente.', 'exito');
 
             document.getElementById('form-crear').reset();
             // Antes acá se volvía a poner "direccion" en el campo después del

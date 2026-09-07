@@ -98,6 +98,14 @@ public class SecurityConfig {
                                 "/api/usuarios/activacion"
                         ).permitAll()
 
+                        // =================================================
+                        // FRONTEND ESTATICO (html/js/css)
+                        // =================================================
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/frontend/**"
+                        ).permitAll()
+
 
                         // =================================================
                         // CONFIGURACIÓN DEL SISTEMA
@@ -137,6 +145,11 @@ public class SecurityConfig {
                         // =================================================
                         // GRUPOS TÉCNICOS
                         // =================================================
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/grupos-tecnicos/*/tecnicos-disponibles"
+                        ).hasRole("SUPERUSUARIO")
+
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/grupos-tecnicos/**"

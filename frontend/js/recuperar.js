@@ -24,6 +24,7 @@
             form.classList.add('oculto');
             mensajeExito.textContent = respuesta.mensaje;
             mensajeExito.classList.remove('oculto');
+            mostrarToast('Solicitud de recuperación enviada.', 'exito');
         } catch (error) {
             mostrarError(mensajeError, error);
             btnRecuperar.disabled = false;

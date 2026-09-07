@@ -1,6 +1,7 @@
 package com.soportenet.soportetecnico.repository;
 
 import com.soportenet.soportetecnico.dto.ConteoProjection;
+import com.soportenet.soportetecnico.dto.TecnicoDisponibleProjection;
 import com.soportenet.soportetecnico.entity.Tecnico;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -28,5 +29,20 @@ public interface TecnicoRepository extends JpaRepository<Tecnico, Long> {
             @Param("idTecnico") Long idTecnico,
             @Param("especialidad") String especialidad,
             @Param("nivel") String nivel
+    );
+
+    /** Tecnicos que todavia no pertenecen al grupo, ordenados por carga (los libres primero). */
+    @Query(value = "SELECT * FROM fn_tecnicos_disponibles_grupo(:idGrupo, :termino, :limite)", nativeQuery = true)
+    List<TecnicoDisponibleProjection> disponiblesParaGrupo(
+            @Param("idGrupo") Long idGrupo,
+            @Param("termino") String termino,
+            @Param("limite") Integer limite
+    );
+
+    /** Autocompletar de "Asignar tecnico" a una solicitud, con la carga actual de cada uno. */
+    @Query(value = "SELECT * FROM fn_buscar_tecnicos_con_carga(:termino, :limite)", nativeQuery = true)
+    List<TecnicoDisponibleProjection> buscarConCarga(
+            @Param("termino") String termino,
+            @Param("limite") Integer limite
     );
 }

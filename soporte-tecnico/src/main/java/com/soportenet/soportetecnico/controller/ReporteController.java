@@ -1,14 +1,5 @@
 package com.soportenet.soportetecnico.controller;
 
-import com.soportenet.soportetecnico.dto.AprobarReporteRequest;
-import com.soportenet.soportetecnico.dto.EnviarReporteRequest;
-import com.soportenet.soportetecnico.dto.RechazarReporteRequest;
-import com.soportenet.soportetecnico.dto.ReporteResponse;
-import com.soportenet.soportetecnico.entity.ReporteSolicitud;
-import com.soportenet.soportetecnico.enums.EstadoAprobacion;
-import com.soportenet.soportetecnico.repository.ReporteSolicitudRepository;
-import com.soportenet.soportetecnico.repository.SolicitudRepository;
-import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -17,15 +8,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Reporte de solucion del tecnico y su revision por el Administrador (casos
- * de uso 4.2.4 y 4.3.7 del documento). Toda la logica de negocio vive en
- * sp_enviar_reporte, sp_aprobar_reporte y sp_rechazar_reporte dentro de
- * PostgreSQL; estos endpoints solo las invocan. idTecnico/idAdministrador
- * salen del JWT, nunca del body.
- */
+import com.soportenet.soportetecnico.dto.AprobarReporteRequest;
+import com.soportenet.soportetecnico.dto.EnviarReporteRequest;
+import com.soportenet.soportetecnico.dto.RechazarReporteRequest;
+import com.soportenet.soportetecnico.dto.ReporteResponse;
+import com.soportenet.soportetecnico.entity.ReporteSolicitud;
+import com.soportenet.soportetecnico.enums.EstadoAprobacion;
+import com.soportenet.soportetecnico.repository.ReporteSolicitudRepository;
+import com.soportenet.soportetecnico.repository.SolicitudRepository;
+
+import jakarta.validation.Valid;
+
+
 @RestController
 public class ReporteController {
 

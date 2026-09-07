@@ -1,5 +1,16 @@
 package com.soportenet.soportetecnico.controller;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.soportenet.soportetecnico.dto.AuditoriaDatosResponse;
 import com.soportenet.soportetecnico.dto.AuditoriaSesionResponse;
 import com.soportenet.soportetecnico.dto.ResumenAuditoriaProjection;
@@ -9,19 +20,8 @@ import com.soportenet.soportetecnico.entity.AuditoriaSesion;
 import com.soportenet.soportetecnico.repository.AuditoriaDatosRepository;
 import com.soportenet.soportetecnico.repository.AuditoriaSesionRepository;
 import com.soportenet.soportetecnico.repository.UsuarioRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
-/**
- * Pantallas de auditoria del Superusuario (seccion 11 del documento, mas la
- * extension de auditoria por tablas). Ambas son de solo lectura: las filas
- * las genera el backend/los triggers, no se crean desde aqui.
- */
 @RestController
 @RequestMapping("/api/auditoria")
 public class AuditoriaController {

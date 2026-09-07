@@ -1,21 +1,5 @@
 package com.soportenet.soportetecnico.controller;
 
-import com.soportenet.soportetecnico.dto.AdjuntoResponse;
-import com.soportenet.soportetecnico.entity.Adjunto;
-import com.soportenet.soportetecnico.repository.AdjuntoRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,13 +10,28 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Evidencia adjunta a una solicitud (fotos o PDF, secciones 2.1/2.2 y 6.1
- * del documento): la sube el cliente dueno o el tecnico asignado. El
- * archivo se guarda en disco, nunca en la base de datos - Postgres solo
- * guarda la referencia, y sp_agregar_adjunto valida quien puede subir y el
- * limite de 5 archivos por solicitud.
- */
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.soportenet.soportetecnico.dto.AdjuntoResponse;
+import com.soportenet.soportetecnico.entity.Adjunto;
+import com.soportenet.soportetecnico.repository.AdjuntoRepository;
+
+
 @RestController
 public class AdjuntoController {
 

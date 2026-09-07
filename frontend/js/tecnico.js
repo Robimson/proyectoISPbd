@@ -6,6 +6,7 @@
     activarModalCambiarContrasena();
 
     let paginaActual = 0;
+    let ultimaPaginaTareas = [];
 
     const mensajeErrorLista = document.getElementById('mensaje-error-lista');
     const contenedorTabla = document.getElementById('contenedor-tabla');
@@ -113,6 +114,8 @@
                 return;
             }
 
+            ultimaPaginaTareas = pagina.content;
+
             const filas = pagina.content.map(filaSolicitud).join('');
             contenedorTabla.innerHTML =
                 '<div class="tabla-scroll"><table><thead><tr>' +
@@ -121,7 +124,11 @@
 
             renderizarPaginacion(pagina);
             contenedorTabla.querySelectorAll('.btn-reportar').forEach(function (boton) {
-                boton.addEventListener('click', function () { abrirPanelReportar(boton.getAttribute('data-id')); });
+                boton.addEventListener('click', function () {
+                    const idSolicitud = boton.getAttribute('data-id');
+                    const solicitud = ultimaPaginaTareas.find(function (s) { return String(s.idSolicitud) === idSolicitud; });
+                    abrirPanelReportar(idSolicitud, solicitud);
+                });
             });
             contenedorTabla.querySelectorAll('.btn-adjuntos').forEach(function (boton) {
                 boton.addEventListener('click', function () { abrirAdjuntos(boton.getAttribute('data-id')); });
@@ -151,12 +158,71 @@
         if (btnSiguiente) btnSiguiente.addEventListener('click', function () { paginaActual++; cargarMisTareas(); });
     }
 
-    function abrirPanelReportar(idSolicitud) {
+    // ---------- Evidencia adjunta al reportar la solución ----------
+    let archivosReporte = [];
+    const inputAdjuntosReporte = document.getElementById('adjuntos-reporte');
+    const listaAdjuntosReporte = document.getElementById('lista-adjuntos-reporte');
+
+    function renderizarAdjuntosReporte() {
+        if (!archivosReporte.length) {
+            listaAdjuntosReporte.innerHTML = '';
+            listaAdjuntosReporte.classList.add('oculto');
+            return;
+        }
+        listaAdjuntosReporte.classList.remove('oculto');
+        listaAdjuntosReporte.innerHTML = archivosReporte.map(function (archivo, indice) {
+            return '<div class="fila-miembro-grupo">' +
+                '<span>' + escaparHtml(archivo.name) + '</span>' +
+                '<button type="button" class="secundario btn-compacto btn-quitar-adjunto-reporte" data-indice="' + indice + '">Quitar</button>' +
+                '</div>';
+        }).join('');
+        listaAdjuntosReporte.querySelectorAll('.btn-quitar-adjunto-reporte').forEach(function (boton) {
+            boton.addEventListener('click', function () {
+                archivosReporte.splice(Number(boton.getAttribute('data-indice')), 1);
+                renderizarAdjuntosReporte();
+            });
+        });
+    }
+
+    inputAdjuntosReporte.addEventListener('change', function () {
+        ocultarMensaje(mensajeErrorReportar);
+        Array.from(inputAdjuntosReporte.files).forEach(function (archivo) {
+            const yaEstaba = archivosReporte.some(function (a) { return a.name === archivo.name && a.size === archivo.size; });
+            if (!yaEstaba) archivosReporte.push(archivo);
+        });
+        inputAdjuntosReporte.value = '';
+
+        if (archivosReporte.length > 5) {
+            mostrarError(mensajeErrorReportar, new Error('Podés adjuntar hasta 5 archivos - se ignoraron los que sobraban.'));
+            archivosReporte = archivosReporte.slice(0, 5);
+        }
+        renderizarAdjuntosReporte();
+    });
+
+    const resumenSolicitudReportar = document.getElementById('resumen-solicitud-reportar');
+
+    function abrirPanelReportar(idSolicitud, solicitud) {
         panelReportar.classList.remove('oculto');
         idSolicitudReportar.textContent = '#' + idSolicitud;
         formReportar.dataset.idSolicitud = idSolicitud;
         document.getElementById('detalle-reporte').value = '';
+        archivosReporte = [];
+        renderizarAdjuntosReporte();
         ocultarMensaje(mensajeErrorReportar);
+
+        // Resumen de la solicitud arriba del formulario - para que el
+        // tecnico no tenga que ir y volver a "Ver detalles" en el celular.
+        if (solicitud) {
+            resumenSolicitudReportar.innerHTML =
+                '<div class="fila-miembro-grupo"><span><strong>Descripción:</strong> ' + escaparHtml(solicitud.descripcion) + '</span></div>' +
+                '<div class="fila-miembro-grupo"><span><strong>Dirección:</strong> ' + escaparHtml(solicitud.direccion || '—') + '</span></div>' +
+                '<div class="fila-miembro-grupo"><span><strong>Prioridad:</strong> ' + escaparHtml(solicitud.prioridad || '—') + '</span></div>';
+            resumenSolicitudReportar.classList.remove('oculto');
+        } else {
+            resumenSolicitudReportar.innerHTML = '';
+            resumenSolicitudReportar.classList.add('oculto');
+        }
+
         panelReportar.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -175,14 +241,32 @@
         try {
             const idSolicitud = formReportar.dataset.idSolicitud;
             const detalleReporte = document.getElementById('detalle-reporte').value.trim();
+            const archivos = archivosReporte;
 
             await apiFetch('/api/solicitudes/' + idSolicitud + '/reportes', {
                 method: 'POST',
                 body: JSON.stringify({ detalleReporte: detalleReporte })
             });
 
+            // El reporte ya quedo enviado aunque alguna evidencia falle al
+            // subir - perder el reporte por eso seria peor que avisar aparte.
+            if (archivos.length) {
+                btnEnviar.textContent = 'Subiendo evidencia...';
+                const resultados = await Promise.allSettled(
+                    archivos.map(function (archivo) { return subirAdjunto(idSolicitud, archivo); })
+                );
+                const fallidos = resultados.filter(function (r) { return r.status === 'rejected'; });
+                if (fallidos.length) {
+                    mostrarError(mensajeErrorReportar, new Error(
+                        'El reporte se envió, pero ' + fallidos.length +
+                        ' archivo(s) no se pudieron subir. Podés agregarlos desde "Adjuntos".'
+                    ));
+                }
+            }
+
             panelReportar.classList.add('oculto');
             cargarMisTareas();
+            mostrarToast('Reporte enviado correctamente.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorReportar, error);
         } finally {

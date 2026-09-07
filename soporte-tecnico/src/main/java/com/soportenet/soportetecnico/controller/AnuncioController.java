@@ -1,27 +1,28 @@
 package com.soportenet.soportetecnico.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.soportenet.soportetecnico.dto.AnuncioAdminProjection;
 import com.soportenet.soportetecnico.dto.AnuncioProjection;
 import com.soportenet.soportetecnico.dto.AnuncioResponse;
 import com.soportenet.soportetecnico.dto.CrearAnuncioRequest;
 import com.soportenet.soportetecnico.entity.Anuncio;
 import com.soportenet.soportetecnico.repository.AnuncioRepository;
+
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
-/**
- * Anuncios globales del Administrador para incidencias masivas (seccion 2.3
- * del documento) - la tabla ya existia en el esquema original pero nunca se
- * habia conectado a ningun procedimiento ni pantalla. El objetivo es que un
- * corte masivo se comunique una sola vez en vez de que cada cliente cree su
- * propio ticket duplicado.
- */
 @RestController
 @RequestMapping("/api/anuncios")
 public class AnuncioController {

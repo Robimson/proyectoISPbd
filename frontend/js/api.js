@@ -5,48 +5,51 @@
 
 const API_BASE = 'http://localhost:8080';
 
+// sessionStorage (no localStorage): la sesion vive solo mientras la
+// pestaña/navegador esta abierto. Al cerrarlo, se pierde sola - no hace
+// falta esperar a que venza el token para que quede "cerrada".
 function guardarSesion(token, idUsuario, rol, estadoPago, idSesion) {
-    localStorage.setItem('token', token);
-    localStorage.setItem('idUsuario', idUsuario);
-    localStorage.setItem('rol', rol);
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('idUsuario', idUsuario);
+    sessionStorage.setItem('rol', rol);
     if (estadoPago) {
-        localStorage.setItem('estadoPago', estadoPago);
+        sessionStorage.setItem('estadoPago', estadoPago);
     } else {
-        localStorage.removeItem('estadoPago');
+        sessionStorage.removeItem('estadoPago');
     }
     if (idSesion) {
-        localStorage.setItem('idSesion', idSesion);
+        sessionStorage.setItem('idSesion', idSesion);
     } else {
-        localStorage.removeItem('idSesion');
+        sessionStorage.removeItem('idSesion');
     }
 }
 
 function limpiarSesion() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('idUsuario');
-    localStorage.removeItem('rol');
-    localStorage.removeItem('estadoPago');
-    localStorage.removeItem('idSesion');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('idUsuario');
+    sessionStorage.removeItem('rol');
+    sessionStorage.removeItem('estadoPago');
+    sessionStorage.removeItem('idSesion');
 }
 
 function obtenerToken() {
-    return localStorage.getItem('token');
+    return sessionStorage.getItem('token');
 }
 
 function obtenerRol() {
-    return localStorage.getItem('rol');
+    return sessionStorage.getItem('rol');
 }
 
 function obtenerIdUsuario() {
-    return localStorage.getItem('idUsuario');
+    return sessionStorage.getItem('idUsuario');
 }
 
 function obtenerEstadoPago() {
-    return localStorage.getItem('estadoPago');
+    return sessionStorage.getItem('estadoPago');
 }
 
 function obtenerIdSesion() {
-    return localStorage.getItem('idSesion');
+    return sessionStorage.getItem('idSesion');
 }
 
 const PAGINA_POR_ROL = {
@@ -91,12 +94,7 @@ async function cerrarSesion() {
     window.location.href = 'login.html';
 }
 
-/**
- * Wrapper central de fetch: agrega el token si existe, arma el body en
- * JSON, y convierte una respuesta no exitosa en una excepcion con el
- * mensaje real que manda el backend (GlobalExceptionHandler siempre
- * responde {"error": "..."}).
- */
+
 async function apiFetch(path, options = {}) {
     const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
     const token = obtenerToken();
@@ -143,11 +141,42 @@ async function apiFetch(path, options = {}) {
 function mostrarError(elementoMensaje, error) {
     elementoMensaje.textContent = error.message || String(error);
     elementoMensaje.classList.remove('oculto');
+    mostrarToast(error.message || String(error), 'error');
 }
 
 function ocultarMensaje(elementoMensaje) {
     elementoMensaje.textContent = '';
     elementoMensaje.classList.add('oculto');
+}
+
+
+function contenedorToasts() {
+    let contenedor = document.getElementById('contenedor-toasts');
+    if (!contenedor) {
+        contenedor = document.createElement('div');
+        contenedor.id = 'contenedor-toasts';
+        document.body.appendChild(contenedor);
+    }
+    return contenedor;
+}
+
+function mostrarToast(mensaje, tipo) {
+    tipo = tipo || 'exito';
+    const contenedor = contenedorToasts();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + tipo;
+    toast.textContent = mensaje;
+
+    contenedor.appendChild(toast);
+
+    const duracion = tipo === 'error' ? 6000 : 4000;
+    setTimeout(function () {
+        toast.classList.add('toast-saliendo');
+        setTimeout(function () {
+            toast.remove();
+        }, 300);
+    }, duracion);
 }
 
 function claseBadgeEstado(nombreEstado) {
@@ -221,11 +250,7 @@ function activarNavegacionPorTabs() {
         secciones.forEach(function (seccion) {
             seccion.classList.toggle('oculto', seccion.id !== idObjetivo);
         });
-        // Paneles flotantes (panel-asignar, panel-rechazar, panel-reportar,
-        // panel-adjuntos...) no son parte del menu - se abren aparte al
-        // hacer clic en una fila. Si quedan abiertos y cambias de pestaña,
-        // se quedaban pegados arriba de la seccion nueva porque nadie los
-        // volvia a ocultar. Se cierran todos al cambiar de pestaña.
+        
         document.querySelectorAll('[id^="panel-"]').forEach(function (panel) {
             panel.classList.add('oculto');
         });
@@ -266,11 +291,7 @@ function htmlCargando(texto) {
     return '<div class="estado-cargando"><span class="spinner"></span>' + escaparHtml(texto || 'Cargando...') + '</div>';
 }
 
-/**
- * Modal de confirmacion propio (reemplaza el confirm() nativo del
- * navegador, que no se puede estilizar). Devuelve una Promise<boolean>:
- * true si el usuario confirma, false si cancela o cierra.
- */
+
 function confirmarAccion(titulo, mensaje, textoConfirmar) {
     return new Promise(function (resolve) {
         const overlay = document.createElement('div');
@@ -449,6 +470,7 @@ function activarBusquedaRemota(idInput, idSugerencias, fnBuscar, callbacks) {
     const sugerencias = document.getElementById(idSugerencias);
     const onSeleccionar = (callbacks && callbacks.onSeleccionar) || function () {};
     const onLimpiar = (callbacks && callbacks.onLimpiar) || function () {};
+    const renderExtra = (callbacks && callbacks.renderExtra) || function () { return ''; };
     let valorSeleccionado = null;
     let temporizador = null;
 
@@ -471,7 +493,7 @@ function activarBusquedaRemota(idInput, idSugerencias, fnBuscar, callbacks) {
                     ? resultados.map(function (u) {
                         return '<button type="button" class="sugerencia-usuario" data-id="' + u.idUsuario + '" data-nombre="' + escaparHtml(u.nombreUsuario) + '">' +
                             '<strong>' + escaparHtml(u.nombreUsuario) + '</strong>' +
-                            '<span>#' + u.idUsuario + ' · ' + escaparHtml(u.correo) + '</span>' +
+                            '<span>#' + u.idUsuario + ' · ' + escaparHtml(u.correo) + renderExtra(u) + '</span>' +
                             '</button>';
                     }).join('')
                     : '<div class="sugerencia-vacia">Sin coincidencias</div>';
@@ -660,6 +682,7 @@ function activarPanelAdjuntos(config) {
             await subirAdjunto(idSolicitudActual, archivo);
             inputArchivo.value = '';
             cargarLista();
+            mostrarToast('Archivo subido correctamente.', 'exito');
         } catch (error) {
             mostrarError(mensajeError, error);
         } finally {
@@ -792,7 +815,11 @@ async function abrirModalDetalleSolicitud(idSolicitud, opciones) {
             '</div>' +
 
             '<h4>Descripción</h4><p>' + escaparHtml(detalle.descripcion) + '</p>' +
-            '<h4>Dirección</h4><p>' + escaparHtml(detalle.direccion || 'No registrada.') + '</p>' +
+            '<h4>Dirección</h4><p>' + escaparHtml(detalle.direccion || 'No registrada.') +
+            (typeof detalle.lat === 'number' && typeof detalle.lng === 'number'
+                ? ' · <a href="https://www.google.com/maps?q=' + detalle.lat + ',' + detalle.lng + '" target="_blank" rel="noopener">📍 Ver ubicación en el mapa</a>'
+                : '') +
+            '</p>' +
 
             '<h4>Cliente</h4>' +
             filaDato('Nombre', escaparHtml(detalle.clienteNombre || '—')) +

@@ -48,11 +48,18 @@
 
             <div class="tarjeta oculto" id="panel-reportar">
                 <h2>Reportar solución — solicitud <span id="id-solicitud-reportar"></span></h2>
+                <div id="resumen-solicitud-reportar" class="lista-miembros-grupo oculto" style="margin-bottom: 16px;"></div>
                 <div id="mensaje-error-reportar" class="mensaje-error oculto"></div>
                 <form id="form-reportar">
                     <div class="campo">
                         <label for="detalle-reporte">¿Qué se hizo para resolverlo?</label>
                         <textarea id="detalle-reporte" required placeholder="Describe la solución aplicada..."></textarea>
+                    </div>
+                    <div class="campo">
+                        <label for="adjuntos-reporte">Evidencia (opcional)</label>
+                        <input type="file" id="adjuntos-reporte" multiple accept="image/jpeg,image/png,image/gif,image/webp,application/pdf">
+                        <p class="subtitulo" style="margin-top: 4px;">Fotos o PDF, máximo 10MB cada uno, hasta 5 archivos. Podés elegirlos de a uno: cada archivo se va sumando a la lista.</p>
+                        <div id="lista-adjuntos-reporte" class="lista-miembros-grupo oculto" style="margin-top: 8px;"></div>
                     </div>
                     <button type="submit" id="btn-enviar-reporte">Enviar reporte</button>
                     <button type="button" class="secundario" id="btn-cancelar-reporte">Cancelar</button>

@@ -40,6 +40,7 @@
             form.classList.add('oculto');
             mensajeExito.textContent = 'Cuenta activada para ' + usuario.correo + '. Ya puedes iniciar sesión.';
             mensajeExito.classList.remove('oculto');
+            mostrarToast('Cuenta activada correctamente.', 'exito');
         } catch (error) {
             mostrarError(mensajeError, error);
             btnActivar.disabled = false;

@@ -40,6 +40,7 @@
             form.classList.add('oculto');
             mensajeExito.textContent = respuesta.mensaje + ' Ya puedes iniciar sesión.';
             mensajeExito.classList.remove('oculto');
+            mostrarToast('Contraseña restablecida correctamente.', 'exito');
         } catch (error) {
             mostrarError(mensajeError, error);
             btnRestablecer.disabled = false;

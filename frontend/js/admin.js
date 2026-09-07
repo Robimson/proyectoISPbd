@@ -195,6 +195,7 @@
             cargarSolicitudes();
             cargarMetricas();
             cargarGraficos();
+            mostrarToast('Solicitud #' + idSolicitud + ' reabierta.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorSolicitudes, error);
             boton.disabled = false;
@@ -202,7 +203,11 @@
     }
 
     
-    const ESTADOS_ASIGNABLES = ['Pendiente', 'En Proceso', 'Pendiente Aprobación'];
+    // "Pendiente Aprobación" no esta aca a proposito: mientras hay un
+    // reporte esperando revision, primero hay que aprobarlo o rechazarlo
+    // (el backend tambien lo bloquea, esto es solo para no mostrar un
+    // formulario que despues va a fallar al enviarlo).
+    const ESTADOS_ASIGNABLES = ['Pendiente', 'En Proceso'];
 
    
     function htmlFormularioAsignar(detalle) {
@@ -224,15 +229,16 @@
             '<label style="font-weight: normal; display: inline-block;">' +
             '<input type="radio" name="tipo-destino-modal" value="grupo"> Grupo técnico</label>' +
             '</div>' +
-            '<div class="campo" id="campo-tecnico-modal" style="position: relative;">' +
+            '<div class="campo" id="campo-tecnico-modal">' +
             '<label for="buscar-tecnico-modal">Técnico</label>' +
-            '<input type="text" id="buscar-tecnico-modal" placeholder="Nombre o correo..." autocomplete="off">' +
-            '<div id="sugerencias-tecnico-modal" class="sugerencias-usuario oculto"></div>' +
+            '<input type="text" id="buscar-tecnico-modal" placeholder="Buscar por nombre o correo (opcional)..." autocomplete="off">' +
+            '<p class="subtitulo" style="margin:4px 0;">Se muestran los 8 más libres. Hacé clic en uno para elegirlo.</p>' +
+            '<div id="lista-tecnicos-modal" class="lista-miembros-grupo"></div>' +
             '</div>' +
-            '<div class="campo oculto" id="campo-grupo-modal" style="position: relative;">' +
+            '<div class="campo oculto" id="campo-grupo-modal">' +
             '<label for="buscar-grupo-modal">Grupo técnico</label>' +
-            '<input type="text" id="buscar-grupo-modal" placeholder="Nombre del grupo..." autocomplete="off">' +
-            '<div id="sugerencias-grupo-modal" class="sugerencias-usuario oculto"></div>' +
+            '<input type="text" id="buscar-grupo-modal" placeholder="Buscar grupo (opcional)..." autocomplete="off">' +
+            '<div id="lista-grupos-modal" class="lista-miembros-grupo"></div>' +
             '</div>' +
             '<div class="campo" style="max-width: 240px;">' +
             '<label for="select-prioridad-modal">Prioridad (opcional)</label>' +
@@ -263,15 +269,90 @@
             selectPrioridadModal.appendChild(opcion);
         });
 
-        const selectorTecnicoModal = activarBusquedaRemota(
-            'buscar-tecnico-modal',
-            'sugerencias-tecnico-modal',
-            function (termino) { return apiFetch('/api/tecnicos/buscar?nombre=' + encodeURIComponent(termino)); }
-        );
-        const selectorGrupoModal = activarSelectorBuscable('buscar-grupo-modal', 'sugerencias-grupo-modal');
-        selectorGrupoModal.setOpciones(catalogoGrupos.map(function (g) {
-            return { valor: g.idGrupo, etiqueta: g.nombreGrupo };
-        }));
+        let idTecnicoElegido = null;
+        let idGrupoElegido = null;
+
+        function colorPorCarga(carga) {
+            if (carga === 0) return 'var(--color-exito)';
+            if (carga <= 5) return 'var(--color-advertencia)';
+            return 'var(--color-peligro)';
+        }
+
+        const listaTecnicosModal = cuerpo.querySelector('#lista-tecnicos-modal');
+        const inputBuscarTecnicoModal = cuerpo.querySelector('#buscar-tecnico-modal');
+
+        async function cargarTecnicosModal(termino) {
+            listaTecnicosModal.innerHTML = htmlCargando();
+            try {
+                const ruta = '/api/tecnicos/buscar' + (termino ? '?nombre=' + encodeURIComponent(termino) : '');
+                const tecnicos = await apiFetch(ruta);
+
+                listaTecnicosModal.innerHTML = tecnicos.length
+                    ? tecnicos.map(function (t) {
+                        const seleccionado = String(t.idUsuario) === String(idTecnicoElegido);
+                        return '<div class="fila-miembro-grupo fila-seleccionable' + (seleccionado ? ' seleccionada' : '') + '" data-id="' + t.idUsuario + '">' +
+                            '<span><strong>' + escaparHtml(t.nombreUsuario) + '</strong> · ' + escaparHtml(t.correo) +
+                            ' · <span style="color:' + colorPorCarga(t.cargaActual) + '; font-weight:600;">' +
+                            t.cargaActual + ' activa' + (t.cargaActual === 1 ? '' : 's') + '</span></span>' +
+                            '</div>';
+                    }).join('')
+                    : '<div class="vacio">Sin coincidencias.</div>';
+
+                listaTecnicosModal.querySelectorAll('[data-id]').forEach(function (fila) {
+                    fila.addEventListener('click', function () {
+                        idTecnicoElegido = fila.getAttribute('data-id');
+                        listaTecnicosModal.querySelectorAll('.fila-seleccionable').forEach(function (f) { f.classList.remove('seleccionada'); });
+                        fila.classList.add('seleccionada');
+                    });
+                });
+            } catch (error) {
+                listaTecnicosModal.innerHTML = '';
+                mostrarError(mensajeErrorAsignarModal, error);
+            }
+        }
+
+        let temporizadorTecnicoModal = null;
+        inputBuscarTecnicoModal.addEventListener('input', function () {
+            clearTimeout(temporizadorTecnicoModal);
+            temporizadorTecnicoModal = setTimeout(function () {
+                cargarTecnicosModal(inputBuscarTecnicoModal.value.trim());
+            }, 300);
+        });
+        cargarTecnicosModal('');
+
+        const listaGruposModal = cuerpo.querySelector('#lista-grupos-modal');
+        const inputBuscarGrupoModal = cuerpo.querySelector('#buscar-grupo-modal');
+
+        function renderizarGruposModal(filtro) {
+            const f = (filtro || '').trim().toLowerCase();
+            const grupos = f
+                ? catalogoGrupos.filter(function (g) { return g.nombreGrupo.toLowerCase().includes(f); })
+                : catalogoGrupos;
+
+            listaGruposModal.innerHTML = grupos.length
+                ? grupos.map(function (g) {
+                    const vacio = !g.totalTecnicos || g.totalTecnicos === 0;
+                    const seleccionado = String(g.idGrupo) === String(idGrupoElegido);
+                    return '<div class="fila-miembro-grupo fila-seleccionable' + (seleccionado ? ' seleccionada' : '') + '" data-id="' + g.idGrupo + '">' +
+                        '<span><strong>' + escaparHtml(g.nombreGrupo) + '</strong> · ' +
+                        (vacio
+                            ? '<span style="color:var(--color-peligro); font-weight:600;">vacío, sin técnicos</span>'
+                            : g.totalTecnicos + ' técnico' + (g.totalTecnicos === 1 ? '' : 's')) +
+                        '</span></div>';
+                }).join('')
+                : '<div class="vacio">No hay grupos técnicos creados todavía.</div>';
+
+            listaGruposModal.querySelectorAll('[data-id]').forEach(function (fila) {
+                fila.addEventListener('click', function () {
+                    idGrupoElegido = fila.getAttribute('data-id');
+                    listaGruposModal.querySelectorAll('.fila-seleccionable').forEach(function (f) { f.classList.remove('seleccionada'); });
+                    fila.classList.add('seleccionada');
+                });
+            });
+        }
+
+        inputBuscarGrupoModal.addEventListener('input', function () { renderizarGruposModal(inputBuscarGrupoModal.value); });
+        renderizarGruposModal('');
 
         cuerpo.querySelectorAll('input[name="tipo-destino-modal"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
@@ -293,16 +374,16 @@
             try {
                 const esTecnico = cuerpo.querySelector('input[name="tipo-destino-modal"]:checked').value === 'tecnico';
                 const prioridad = selectPrioridadModal.value;
-                const idTecnico = selectorTecnicoModal.valor();
-                const idGrupo = selectorGrupoModal.valor();
+                const idTecnico = idTecnicoElegido;
+                const idGrupo = idGrupoElegido;
                 const campoMotivo = cuerpo.querySelector('#motivo-reasignacion-modal');
                 const motivo = campoMotivo ? campoMotivo.value.trim() : '';
 
                 if (esTecnico && !idTecnico) {
-                    throw new Error('Elegí un técnico de la lista de sugerencias (no alcanza con escribir el nombre).');
+                    throw new Error('Elegí un técnico de la lista (hacé clic en uno).');
                 }
                 if (!esTecnico && !idGrupo) {
-                    throw new Error('Elegí un grupo de la lista de sugerencias (no alcanza con escribir el nombre).');
+                    throw new Error('Elegí un grupo de la lista (hacé clic en uno).');
                 }
 
                 await apiFetch('/api/solicitudes/' + detalle.idSolicitud + '/asignaciones', {
@@ -319,6 +400,10 @@
                 cargarSolicitudes();
                 cargarMetricas();
                 cargarGraficos();
+                mostrarToast(
+                    detalle.estado !== 'Pendiente' ? 'Solicitud reasignada correctamente.' : 'Solicitud asignada correctamente.',
+                    'exito'
+                );
             } catch (error) {
                 mostrarError(mensajeErrorAsignarModal, error);
                 btnConfirmar.disabled = false;
@@ -334,8 +419,13 @@
     function filaReporte(r) {
         return '<tr>' +
             '<td>#' + r.idReporte + '</td>' +
-            '<td>Solicitud #' + r.idSolicitud + '</td>' +
-            '<td>Técnico #' + r.idTecnico + '</td>' +
+            '<td>Solicitud #' + r.idSolicitud +
+            '<br><span class="subtitulo" style="font-size:0.78rem;">' +
+            escaparHtml(r.solicitudDescripcion || '—') + ' · ' + escaparHtml(r.solicitudDireccion || '—') +
+            (r.solicitudCategoria ? ' · ' + escaparHtml(r.solicitudCategoria) : '') +
+            (r.solicitudPrioridad ? ' · ' + escaparHtml(r.solicitudPrioridad) : '') +
+            '</span></td>' +
+            '<td>' + escaparHtml(r.tecnicoNombre || ('Técnico #' + r.idTecnico)) + '</td>' +
             '<td>' + escaparHtml(r.detalleReporte) + '</td>' +
             '<td>' + formatearFecha(r.fechaEnvio) + '</td>' +
             '<td><div class="acciones-fila">' +
@@ -453,6 +543,7 @@
             cargarSolicitudes();
             cargarMetricas();
             cargarGraficos();
+            mostrarToast('Reporte #' + idReporte + ' aprobado.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorReportes, error);
             boton.disabled = false;
@@ -494,6 +585,7 @@
             cargarSolicitudes();
             cargarMetricas();
             cargarGraficos();
+            mostrarToast('Reporte #' + idReporte + ' rechazado.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorRechazar, error);
         } finally {
@@ -565,6 +657,7 @@
                 body: JSON.stringify({ estadoPago: nuevoEstado })
             });
             cargarClientes();
+            mostrarToast('Estado de pago actualizado.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorClientes, error);
         } finally {
@@ -656,6 +749,7 @@
                             await apiFetch('/api/anuncios/' + boton.getAttribute('data-id') + '/desactivacion', { method: 'POST' });
                             cargarAnunciosAdmin();
                             cargarAnunciosActivos('banner-anuncios');
+                            mostrarToast('Anuncio desactivado.', 'exito');
                         } catch (error) {
                             mostrarError(mensajeError, error);
                             boton.disabled = false;
@@ -693,6 +787,7 @@
                 overlay.querySelector('#form-anuncio').reset();
                 cargarAnunciosAdmin();
                 cargarAnunciosActivos('banner-anuncios');
+                mostrarToast('Anuncio publicado.', 'exito');
             } catch (error) {
                 mostrarError(mensajeError, error);
             } finally {

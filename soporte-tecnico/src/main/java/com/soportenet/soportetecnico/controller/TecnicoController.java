@@ -1,11 +1,10 @@
 package com.soportenet.soportetecnico.controller;
 
 import com.soportenet.soportetecnico.dto.EditarPerfilTecnicoRequest;
+import com.soportenet.soportetecnico.dto.TecnicoDisponibleProjection;
 import com.soportenet.soportetecnico.dto.TecnicoResponse;
-import com.soportenet.soportetecnico.dto.UsuarioBusquedaProjection;
 import com.soportenet.soportetecnico.entity.Tecnico;
 import com.soportenet.soportetecnico.repository.TecnicoRepository;
-import com.soportenet.soportetecnico.repository.UsuarioRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,21 +19,21 @@ import java.util.List;
 public class TecnicoController {
 
     private final TecnicoRepository tecnicoRepository;
-    private final UsuarioRepository usuarioRepository;
 
-    public TecnicoController(TecnicoRepository tecnicoRepository, UsuarioRepository usuarioRepository) {
+    public TecnicoController(TecnicoRepository tecnicoRepository) {
         this.tecnicoRepository = tecnicoRepository;
-        this.usuarioRepository = usuarioRepository;
     }
 
     /**
-     * Autocompletar por nombre o correo, solo tecnicos - usado en "Agregar
-     * técnico a un grupo", que antes era un <select> con los ~3000 tecnicos
-     * de prueba sin poder buscar.
+     * Tecnicos habilitados/activos con su carga actual (asignaciones
+     * vigentes) - usado en "Asignar técnico" a una solicitud. Sin "nombre"
+     * (u opcional/vacio) devuelve los 8 mas libres, para que el admin vea
+     * de una a quien puede asignar sin tener que escribir nada; con
+     * "nombre" filtra por ese termino.
      */
     @GetMapping("/buscar")
-    public List<UsuarioBusquedaProjection> buscar(@RequestParam String nombre) {
-        return usuarioRepository.buscarTecnicos(nombre);
+    public List<TecnicoDisponibleProjection> buscar(@RequestParam(required = false) String nombre) {
+        return tecnicoRepository.buscarConCarga(nombre, 8);
     }
 
   

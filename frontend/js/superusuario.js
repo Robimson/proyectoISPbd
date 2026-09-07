@@ -90,6 +90,7 @@
             tokenGenerado.classList.remove('oculto');
 
             cargarUsuarios();
+            mostrarToast('Invitación enviada a ' + respuesta.correo + '.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorInvitar, error);
         } finally {
@@ -202,6 +203,7 @@
                     })
                 });
                 cerrar();
+                mostrarToast('Perfil técnico actualizado.', 'exito');
             } catch (error) {
                 mostrarError(mensajeError, error);
                 btnGuardar.disabled = false;
@@ -264,6 +266,7 @@
                 body: JSON.stringify({ estadoCuenta: nuevoEstado })
             });
             cargarUsuarios();
+            mostrarToast('Estado de cuenta actualizado.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorUsuarios, error);
         } finally {
@@ -313,6 +316,7 @@
             });
             document.getElementById('form-grupo').reset();
             cargarGrupos();
+            mostrarToast('Grupo creado correctamente.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorGrupo, error);
         }
@@ -332,16 +336,13 @@
             '</div>' +
 
             '<div id="vista-agregar-grupo" class="oculto">' +
-            '<div class="campo" style="position: relative;">' +
-            '<label for="buscar-tecnico-grupo">Buscar técnico</label>' +
-            '<input type="text" id="buscar-tecnico-grupo" placeholder="Nombre o correo..." autocomplete="off">' +
-            '<div id="sugerencias-tecnico-grupo" class="sugerencias-usuario oculto"></div>' +
+            '<div class="campo">' +
+            '<label for="buscar-disponible-grupo">Buscar por nombre o correo (opcional)</label>' +
+            '<input type="text" id="buscar-disponible-grupo" placeholder="Dejalo vacío para ver a todos los disponibles..." autocomplete="off">' +
             '</div>' +
-            '<div id="mensaje-agregado-grupo" class="mensaje-info oculto" style="margin-bottom: 12px;"></div>' +
-            '<div style="display: flex; gap: 10px;">' +
-            '<button type="button" id="btn-volver-a-miembros" class="secundario" style="flex: 1;">← Volver a la lista</button>' +
-            '<button type="button" id="btn-agregar-miembro-grupo" style="flex: 1;">Agregar</button>' +
-            '</div>' +
+            '<p class="subtitulo" style="margin-top:-6px;">Se muestran los 8 más libres. Si buscás a alguien puntual, escribí su nombre o correo.</p>' +
+            '<div id="lista-tecnicos-disponibles" class="lista-miembros-grupo"></div>' +
+            '<button type="button" id="btn-volver-a-miembros" class="secundario" style="width: 100%; margin-top: 12px;">← Volver a la lista</button>' +
             '</div>' +
 
             '<div class="modal-acciones">' +
@@ -368,10 +369,11 @@
         document.addEventListener('keydown', alPresionarTecla);
 
         const mensajeError = overlay.querySelector('#mensaje-error-editar-grupo');
-        const mensajeAgregado = overlay.querySelector('#mensaje-agregado-grupo');
         const listaMiembros = overlay.querySelector('#lista-miembros-grupo');
         const vistaMiembros = overlay.querySelector('#vista-miembros-grupo');
         const vistaAgregar = overlay.querySelector('#vista-agregar-grupo');
+        const listaDisponibles = overlay.querySelector('#lista-tecnicos-disponibles');
+        const inputBuscarDisponible = overlay.querySelector('#buscar-disponible-grupo');
 
         async function cargarMiembros() {
             listaMiembros.textContent = 'Cargando miembros...';
@@ -393,6 +395,7 @@
                             await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros/' + boton.getAttribute('data-id'), { method: 'DELETE' });
                             cargarMiembros();
                             cargarGraficos();
+                            mostrarToast('Técnico quitado del grupo.', 'exito');
                         } catch (error) {
                             mostrarError(mensajeError, error);
                             boton.disabled = false;
@@ -405,18 +408,66 @@
             }
         }
 
-        const selectorTecnico = activarBusquedaRemota(
-            'buscar-tecnico-grupo',
-            'sugerencias-tecnico-grupo',
-            function (termino) { return apiFetch('/api/tecnicos/buscar?nombre=' + encodeURIComponent(termino)); }
-        );
+        function colorPorCarga(carga) {
+            if (carga === 0) return 'var(--color-exito)';
+            if (carga <= 5) return 'var(--color-advertencia)';
+            return 'var(--color-peligro)';
+        }
+
+        async function cargarTecnicosDisponibles(termino) {
+            listaDisponibles.innerHTML = htmlCargando();
+            try {
+                const ruta = '/api/grupos-tecnicos/' + idGrupo + '/tecnicos-disponibles' +
+                    (termino ? '?termino=' + encodeURIComponent(termino) : '');
+                const tecnicos = await apiFetch(ruta);
+
+                listaDisponibles.innerHTML = tecnicos.length
+                    ? tecnicos.map(function (t) {
+                        return '<div class="fila-miembro-grupo">' +
+                            '<span><strong>' + escaparHtml(t.nombreUsuario) + '</strong> · ' + escaparHtml(t.correo) +
+                            ' · <span style="color:' + colorPorCarga(t.cargaActual) + '; font-weight:600;">' +
+                            t.cargaActual + ' activa' + (t.cargaActual === 1 ? '' : 's') + '</span></span>' +
+                            '<button type="button" class="btn-agregar-disponible" data-id="' + t.idUsuario + '">Agregar</button>' +
+                            '</div>';
+                    }).join('')
+                    : '<div class="vacio">No hay técnicos disponibles para agregar (ya están todos en el grupo, o ninguno coincide con la búsqueda).</div>';
+
+                listaDisponibles.querySelectorAll('.btn-agregar-disponible').forEach(function (boton) {
+                    boton.addEventListener('click', async function () {
+                        boton.disabled = true;
+                        try {
+                            await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros', {
+                                method: 'POST',
+                                body: JSON.stringify({ idTecnico: Number(boton.getAttribute('data-id')) })
+                            });
+                            mostrarToast('Técnico agregado al grupo.', 'exito');
+                            cargarTecnicosDisponibles(inputBuscarDisponible.value.trim());
+                        } catch (error) {
+                            mostrarError(mensajeError, error);
+                            boton.disabled = false;
+                        }
+                    });
+                });
+            } catch (error) {
+                listaDisponibles.innerHTML = '';
+                mostrarError(mensajeError, error);
+            }
+        }
+
+        let temporizadorBusquedaDisponible = null;
+        inputBuscarDisponible.addEventListener('input', function () {
+            clearTimeout(temporizadorBusquedaDisponible);
+            temporizadorBusquedaDisponible = setTimeout(function () {
+                cargarTecnicosDisponibles(inputBuscarDisponible.value.trim());
+            }, 300);
+        });
 
         function irAVistaAgregar() {
             ocultarMensaje(mensajeError);
-            ocultarMensaje(mensajeAgregado);
-            selectorTecnico.limpiar();
+            inputBuscarDisponible.value = '';
             vistaMiembros.classList.add('oculto');
             vistaAgregar.classList.remove('oculto');
+            cargarTecnicosDisponibles('');
         }
 
         function volverAVistaMiembros() {
@@ -428,26 +479,6 @@
 
         overlay.querySelector('#btn-ir-a-agregar').addEventListener('click', irAVistaAgregar);
         overlay.querySelector('#btn-volver-a-miembros').addEventListener('click', volverAVistaMiembros);
-
-        overlay.querySelector('#btn-agregar-miembro-grupo').addEventListener('click', async function () {
-            ocultarMensaje(mensajeError);
-            const idTecnico = selectorTecnico.valor();
-            if (!idTecnico) {
-                mostrarError(mensajeError, new Error('Elegí un técnico de la lista de sugerencias (no alcanza con escribir el nombre).'));
-                return;
-            }
-            try {
-                await apiFetch('/api/grupos-tecnicos/' + idGrupo + '/miembros', {
-                    method: 'POST',
-                    body: JSON.stringify({ idTecnico: Number(idTecnico) })
-                });
-                mensajeAgregado.textContent = 'Técnico agregado. Podés seguir agregando más.';
-                mensajeAgregado.classList.remove('oculto');
-                selectorTecnico.limpiar();
-            } catch (error) {
-                mostrarError(mensajeError, error);
-            }
-        });
 
         cargarMiembros();
     }
@@ -492,18 +523,7 @@
             '</tr>';
     }
 
-    /**
-     * Arma el nombre del archivo con la fecha del respaldo en el propio
-     * navegador, en vez de depender del header Content-Disposition: ese
-     * header requiere que el backend agregue Access-Control-Expose-Headers
-     * para poder leerse desde fetch() entre distinto puerto/origen, y sin
-     * eso el nombre siempre caia al valor por defecto sin fecha.
-     *
-     * Tanto FULL como WAL llegan del backend como un .zip real y valido: el
-     * FULL ya se arma comprimido en el servidor, y el WAL se envuelve en un
-     * zip al vuelo en el momento de la descarga (el archivo original en
-     * wal_archive nunca se toca).
-     */
+   
     function nombreArchivoRespaldo(tipo, fechaIso, idRespaldo) {
         const fecha = new Date(fechaIso);
         const pad = function (n) { return String(n).padStart(2, '0'); };
@@ -513,12 +533,7 @@
         return 'respaldo_' + prefijo + '_' + marca + '_' + idRespaldo + '.zip';
     }
 
-    /**
-     * pg_basebackup no reporta un porcentaje que el backend pueda exponer
-     * facilmente por HTTP, asi que en vez de una barra con %, mostramos un
-     * spinner indeterminado mientras el estado siga EN_PROCESO - misma idea
-     * que .estado-cargando ya usa en el resto de la app para "Cargando...".
-     */
+    
     async function descargarRespaldo(id, tipo, fechaIso, boton) {
         const textoOriginal = boton.textContent;
         boton.disabled = true;
@@ -655,6 +670,7 @@
             mensajeExitoConfig.textContent = 'Configuración de respaldos guardada.';
             mensajeExitoConfig.classList.remove('oculto');
             setTimeout(function () { ocultarMensaje(mensajeExitoConfig); }, 4000);
+            mostrarToast('Configuración de respaldos guardada.', 'exito');
         } catch (error) {
             mostrarError(mensajeErrorConfig, error);
         } finally {
@@ -663,12 +679,7 @@
         }
     });
 
-    /**
-     * Revisa cada 5s si la fila del respaldo recien iniciado ya salio de
-     * EN_PROCESO. pg_basebackup no expone un progreso parcial por HTTP, asi
-     * que esto es lo mas cercano a una barra de progreso sin inventar un
-     * porcentaje falso.
-     */
+    
     function monitorearRespaldo(idRespaldo) {
         if (monitoreoRespaldoActivo) clearInterval(monitoreoRespaldoActivo);
 
@@ -687,6 +698,7 @@
                     mensajeExitoRespaldos.textContent = 'Respaldo completo generado correctamente.';
                     mensajeExitoRespaldos.classList.remove('oculto');
                     setTimeout(function () { ocultarMensaje(mensajeExitoRespaldos); }, 4000);
+                    mostrarToast('Respaldo completo generado correctamente.', 'exito');
                 } else {
                     mostrarError(mensajeErrorRespaldos, new Error('El respaldo terminó con error. Revisá el detalle en la base o los logs del backend.'));
                 }
@@ -1068,6 +1080,7 @@
                 aplicarConfiguracionSistema();
                 mensajeExito.textContent = 'Logo actualizado.';
                 mensajeExito.classList.remove('oculto');
+                mostrarToast('Logo actualizado.', 'exito');
             } catch (error) {
                 mostrarError(mensajeError, error);
             } finally {
@@ -1099,6 +1112,7 @@
                 aplicarConfiguracionSistema();
                 mensajeExito.textContent = 'Configuración guardada.';
                 mensajeExito.classList.remove('oculto');
+                mostrarToast('Configuración guardada.', 'exito');
             } catch (error) {
                 mostrarError(mensajeError, error);
             } finally {
