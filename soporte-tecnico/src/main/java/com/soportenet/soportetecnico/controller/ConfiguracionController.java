@@ -21,13 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-/**
- * Configuracion global de marca (nombre del negocio, logo, color) - la pide
- * el Superusuario para poder personalizar la app sin depender de que un
- * programador cambie codigo. GET es publico (sin login): hasta la pantalla
- * de login necesita mostrar el nombre/logo correctos antes de que exista
- * una sesion - es la unica excepcion real a "todo pide JWT" en el sistema.
- */
+
 @RestController
 @RequestMapping("/api/configuracion")
 public class ConfiguracionController {
@@ -85,9 +79,7 @@ public class ConfiguracionController {
             Path destino = directorioLogo.resolve(NOMBRE_ARCHIVO_LOGO);
             archivo.transferTo(destino);
 
-            // URL fija (siempre el mismo archivo, se sobreescribe) - el
-            // frontend le agrega un parametro de version para que el
-            // navegador no se quede con una copia vieja en cache.
+            
             configuracionRepository.actualizarLogo(idSuperusuario, "/api/configuracion/logo/archivo");
 
             return ResponseEntity.ok(configuracionRepository.obtener());

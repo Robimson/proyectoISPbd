@@ -41,22 +41,11 @@ public class Solicitud {
     @Column(name = "fecha_limite_confirmacion")
     private OffsetDateTime fechaLimiteConfirmacion;
 
-    // Direccion del SERVICIO para este ticket puntual, no el perfil del
-    // cliente (un cliente puede tener mas de una propiedad). La llena
-    // sp_crear_solicitud; nullable porque las solicitudes creadas antes de
-    // este cambio no la tienen.
+    
     @Column(name = "direccion", length = 255)
     private String direccion;
 
-    // Bloqueo optimista: OJO, aqui NO se usa @Version de JPA a proposito.
-    // El trigger fn_pre_update_solicitud() ya incrementa esta columna en la BD
-    // y rechaza el UPDATE si NEW.version llega distinto de OLD.version.
-    // Si usaramos @Version, Hibernate enviaria el UPDATE con version+1 ya
-    // calculado en el SET, y el trigger lo interpretaria como un conflicto
-    // falso (rechazaria TODAS las actualizaciones). Por eso este campo es de
-    // solo lectura desde JPA: se consulta, pero las actualizaciones reales se
-    // hacen con queries nativas que dejan la columna intacta en el SET,
-    // dejando que el trigger sea la unica fuente de verdad del incremento.
+    
     @Column(name = "version", nullable = false, insertable = false, updatable = false)
     private Integer version;
 

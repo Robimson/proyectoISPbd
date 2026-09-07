@@ -12,12 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 
-/**
- * Emite y valida los JWT de sesion. El token lleva el id de usuario como
- * subject y el rol como claim, para que el filtro de seguridad (siguiente
- * fase) pueda autorizar por rol sin volver a consultar la base de datos en
- * cada request.
- */
+
 @Service
 public class JwtService {
 
@@ -42,11 +37,7 @@ public class JwtService {
                 .compact();
     }
 
-    /**
-     * Lanza JwtException (token invalido, corrupto o vencido) si no puede
-     * validar el token; quien llame decide como traducir eso a una
-     * respuesta HTTP.
-     */
+    
     public Claims validarYObtenerClaims(String token) throws JwtException {
         return Jwts.parser()
                 .verifyWith(clave)

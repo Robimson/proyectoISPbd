@@ -14,12 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Catalogos de solo lectura para poblar los desplegables del frontend
- * (categoria/prioridad al crear un ticket, estado para filtrar, tecnicos
- * habilitados al asignar). Categoria/Prioridad/Estado no tienen relaciones
- * ni datos sensibles, asi que se sirven como entidad directa.
- */
+
 @RestController
 public class CatalogoController {
 

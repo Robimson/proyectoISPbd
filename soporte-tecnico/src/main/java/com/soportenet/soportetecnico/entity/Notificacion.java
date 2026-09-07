@@ -4,12 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
-/**
- * Evento notificado a un usuario (seccion 8 del documento). Las
- * inserta cada procedimiento cuando corresponde (asignar, aprobar/rechazar
- * reporte, confirmar, reabrir); NotificacionEmailScheduler las recoge y las
- * manda por correo, marcando correoEnviado para no duplicar el envio.
- */
+
 @Entity
 @Table(name = "notificacion")
 public class Notificacion {

@@ -5,13 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Extiende Usuario con datos propios del cliente.
- * La PK (id_usuario) es COMPARTIDA con Usuario -> se usa @MapsId, no herencia Java.
- * estado_pago (seccion 7.4) es solo informativo para el Administrador al
- * priorizar; se actualiza por carga manual de Excel/CSV, nunca bloquea ni
- * cierra solicitudes automaticamente.
- */
+
 @Entity
 @Table(name = "cliente")
 public class Cliente {

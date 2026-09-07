@@ -12,20 +12,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-/**
- * Envio de correos reales (invitaciones y notificaciones, seccion 8 del
- * documento). Nunca lanza excepcion hacia quien la llama: un correo que
- * falla se registra en el log, pero no debe tumbar la operacion principal
- * (invitar un usuario, asignar un ticket, etc. ya se hicieron en la base de
- * datos antes de intentar el envio).
- *
- * Manda HTML con la marca del negocio (nombre y color de
- * configuracion_sistema - la misma que ya personaliza el resto del sitio),
- * no texto plano. El cuerpo que pasa quien llama sigue siendo texto plano
- * con saltos de linea normales ("\n\n" entre parrafos) - esta clase se
- * encarga de escaparlo y convertirlo a HTML, para no tener que tocar cada
- * lugar que arma un mensaje.
- */
+
 @Service
 public class EmailService {
 
@@ -69,12 +56,7 @@ public class EmailService {
         }
     }
 
-    /**
-     * Arma el HTML final envolviendo el cuerpo en la plantilla con marca. Si
-     * no se puede leer la configuracion del negocio (la base no responde,
-     * todavia no hay fila, etc.) cae a los valores por defecto - un correo
-     * con branding generico es preferible a que el correo no salga.
-     */
+    
     private String armarHtml(String asunto, String cuerpo, String enlace, String textoBoton) {
         String nombreNegocio = NOMBRE_NEGOCIO_DEFAULT;
         String eslogan = "";

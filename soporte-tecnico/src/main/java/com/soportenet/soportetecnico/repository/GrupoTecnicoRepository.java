@@ -25,13 +25,7 @@ public interface GrupoTecnicoRepository extends JpaRepository<GrupoTecnico, Long
     @Query(value = "SELECT * FROM fn_miembros_grupo(:idGrupo)", nativeQuery = true)
     List<UsuarioBusquedaProjection> listarMiembros(@Param("idGrupo") Long idGrupo);
 
-    /**
-     * Agrega un tecnico a un grupo, via sp_agregar_miembro_grupo(). Si el id
-     * no pertenece a un tecnico habilitado o el grupo no existe, la FK de
-     * tecnico_grupo lo rechaza como DataIntegrityViolationException (ya
-     * traducida a 400 por GlobalExceptionHandler); si ya era miembro, la PK
-     * compuesta lo rechaza igual.
-     */
+    
     @Query(value = "SELECT sp_agregar_miembro_grupo(:idTecnico, :idGrupo)", nativeQuery = true)
     void agregarMiembro(@Param("idTecnico") Long idTecnico, @Param("idGrupo") Long idGrupo);
 

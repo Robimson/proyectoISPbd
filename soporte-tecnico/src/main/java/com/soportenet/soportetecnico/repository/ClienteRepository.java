@@ -7,11 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
-    /**
-     * Invoca sp_cambiar_estado_pago(...). Uso unicamente informativo para
-     * el Administrador (seccion 7.4 del documento) - nunca bloquea ni
-     * cierra solicitudes.
-     */
+  
     @Query(value = "SELECT sp_cambiar_estado_pago(:idAdministrador, :idCliente, CAST(:nuevoEstadoPago AS estado_pago_tipo))",
            nativeQuery = true)
     void cambiarEstadoPago(

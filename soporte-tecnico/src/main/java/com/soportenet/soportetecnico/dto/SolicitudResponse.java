@@ -4,12 +4,7 @@ import com.soportenet.soportetecnico.entity.Solicitud;
 
 import java.time.OffsetDateTime;
 
-/**
- * DTO de salida: evita serializar la entidad JPA directamente (con sus
- * relaciones LAZY, que romperian a Jackson si no se manejan con cuidado).
- * Es inmutable a proposito: se arma completo con el constructor y no se
- * modifica despues.
- */
+
 public class SolicitudResponse {
 
     private final Long idSolicitud;

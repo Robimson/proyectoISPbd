@@ -14,14 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Asignacion y reasignacion de una solicitud a un tecnico o a un grupo
- * tecnico (caso de uso 4.3.4 del documento). Toda la logica de negocio
- * (administrador activo, exactamente tecnico o grupo, motivo obligatorio en
- * reasignaciones, bloqueo si esta Cerrada, notificacion al tecnico) vive en
- * sp_asignar_solicitud dentro de PostgreSQL; este endpoint solo la invoca y
- * devuelve la solicitud con su estado y prioridad ya actualizados.
- */
+
 @RestController
 @RequestMapping("/api/solicitudes")
 public class AsignacionSolicitudController {

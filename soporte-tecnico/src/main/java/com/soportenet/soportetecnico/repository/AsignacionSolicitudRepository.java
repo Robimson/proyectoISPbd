@@ -7,10 +7,6 @@ import java.util.Optional;
 
 public interface AsignacionSolicitudRepository extends JpaRepository<AsignacionSolicitud, Long> {
 
-    /**
-     * La asignacion vigente de una solicitud (quien la tiene ahora mismo),
-     * si tiene alguna. Query derivada de Spring Data - sin SQL escrito a
-     * mano, igual que AdjuntoRepository.findBySolicitudIdSolicitudOrderByFechaSubidaAsc.
-     */
+    
     Optional<AsignacionSolicitud> findBySolicitudIdSolicitudAndVigenteTrue(Long idSolicitud);
 }

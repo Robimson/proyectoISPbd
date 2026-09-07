@@ -7,12 +7,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
-/**
- * Fila que dejo el trigger fn_auditar_cambio() al modificarse una tabla de
- * operacion interna (usuario, cliente, solicitud, asignacion_solicitud,
- * reporte_solicitud, grupo_tecnico, tecnico_grupo). Nunca se inserta desde
- * Java - esta entidad es solo de lectura para la pantalla de auditoria.
- */
+
 @Entity
 @Table(name = "auditoria_datos")
 public class AuditoriaDatos {

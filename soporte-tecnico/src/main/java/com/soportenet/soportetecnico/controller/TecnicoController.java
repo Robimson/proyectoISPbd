@@ -14,14 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Edicion del perfil operativo del tecnico (especialidad/nivel), separado de
- * CatalogoController (que solo expone GET /api/tecnicos de solo lectura para
- * los desplegables). sp_invitar_usuario crea al tecnico con especialidad NULL
- * y nivel 'junior' por defecto - este es el unico lugar que los actualiza
- * despues, y solo el Superusuario puede hacerlo (es quien ya administra esa
- * cuenta y sus grupos, seccion 2.4 del documento).
- */
+
 @RestController
 @RequestMapping("/api/tecnicos")
 public class TecnicoController {
@@ -44,13 +37,7 @@ public class TecnicoController {
         return usuarioRepository.buscarTecnicos(nombre);
     }
 
-    /**
-     * Un solo tecnico, para precargar el modal de "Perfil tecnico" del
-     * Superusuario. findById() ya viene de JpaRepository (sin SQL propio,
-     * mismo patron que SolicitudController/ReporteController) - a proposito
-     * en vez de reusar CatalogoController.listarTecnicos(), que trae TODOS
-     * los tecnicos habilitados solo para leer uno.
-     */
+  
     @GetMapping("/{id}")
     public ResponseEntity<TecnicoResponse> obtener(@PathVariable Long id) {
         return tecnicoRepository.findById(id)

@@ -15,14 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * Lee el header "Authorization: Bearer <token>", valida el JWT y deja al
- * usuario autenticado en el SecurityContext. El subject del token es el
- * id_usuario (como String) y el claim "rol" se mapea a un authority
- * "ROLE_<ROL>" para que SecurityConfig pueda usar hasRole(...).
- * Si el token falta o es invalido, simplemente no autentica: es
- * SecurityConfig quien decide si ese endpoint exige login o no.
- */
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

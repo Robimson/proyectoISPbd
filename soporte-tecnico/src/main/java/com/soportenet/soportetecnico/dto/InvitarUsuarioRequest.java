@@ -5,12 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * Lo que el Superusuario envia para invitar un nuevo usuario (caso de uso
- * 4.4.2 del documento). No incluye contrasena: el Superusuario nunca la crea
- * (seccion 2.4); el usuario invitado la define al activar su cuenta con el
- * token que devuelve este endpoint. idSuperusuario sale del JWT, no del body.
- */
+
 public class InvitarUsuarioRequest {
 
     @NotBlank(message = "El nombre de usuario no puede estar vacio")

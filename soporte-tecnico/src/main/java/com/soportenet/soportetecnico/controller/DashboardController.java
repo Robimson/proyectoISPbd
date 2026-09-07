@@ -11,16 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Datos para los graficos del "Resumen" de Administrador y Superusuario.
- * Vive aparte de SolicitudController/TecnicoController/UsuarioController
- * porque cada uno de estos dos endpoints combina conteos de varias tablas
- * distintas a la vez (solicitud + reporte_solicitud + tecnico, o usuario +
- * tecnico) - no pertenecen naturalmente a un solo controlador de dominio,
- * son vistas agregadas pensadas para esta pantalla en particular. Todo lo
- * que devuelven es de solo lectura (conteos agrupados), sin logica de
- * negocio nueva.
- */
+
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {
@@ -40,10 +31,7 @@ public class DashboardController {
         this.usuarioRepository = usuarioRepository;
     }
 
-    /**
-     * Administrador: solicitudes por estado/prioridad/categoria, tasa de
-     * aprobacion de reportes y carga de trabajo de los tecnicos.
-     */
+    
     @GetMapping("/administrador")
     public ResponseEntity<EstadisticasAdminResponse> estadisticasAdministrador() {
         return ResponseEntity.ok(new EstadisticasAdminResponse(
@@ -55,12 +43,7 @@ public class DashboardController {
         ));
     }
 
-    /**
-     * Superusuario: composicion del equipo tecnico por nivel y de la base de
-     * usuarios por rol. "Miembros por grupo tecnico" no esta aca porque el
-     * frontend ya lo puede sacar de GET /api/grupos-tecnicos, que ya trae el
-     * conteo por grupo.
-     */
+    
     @GetMapping("/superusuario")
     public ResponseEntity<EstadisticasSuperusuarioResponse> estadisticasSuperusuario() {
         return ResponseEntity.ok(new EstadisticasSuperusuarioResponse(

@@ -327,15 +327,7 @@
         }
     });
 
-    /**
-     * Modal "Editar grupo": dos pantallas dentro del mismo modal, no todo
-     * junto (mezclar "quién ya está" con "buscar para agregar" en un solo
-     * bloque resultaba confuso). Por defecto se ve la lista de miembros
-     * (con "Quitar" - DELETE .../miembros/{id} ya existía en el backend
-     * pero no se podía usar desde ninguna pantalla); "+ Agregar técnico"
-     * cambia a la pantalla de búsqueda, que reemplaza a la lista mientras
-     * está activa. "Volver" regresa a la lista ya actualizada.
-     */
+    
     async function abrirModalEditarGrupo(idGrupo, nombreGrupo) {
         const overlay = document.createElement('div');
         overlay.className = 'overlay-modal';
@@ -377,10 +369,7 @@
             if (evento.key === 'Escape') cerrar();
         }
 
-        // Se agrega al documento ANTES de conectar activarBusquedaRemota():
-        // esa funcion busca sus elementos con document.getElementById(), que
-        // no los encuentra mientras el modal solo existe como overlay.innerHTML
-        // (todavia no forma parte del documento vivo).
+       
         document.body.appendChild(overlay);
 
         overlay.addEventListener('click', function (evento) {
@@ -684,10 +673,7 @@
         if (btnSiguiente) btnSiguiente.addEventListener('click', function () { alCambiar(pagina.number + 1); });
     }
 
-    // ---------- Configuracion del sistema (nombre/logo/color de marca) ----------
-    // No es algo que se toque a diario (a lo sumo cuando el negocio cambia
-    // de nombre o quiere personalizar colores), por eso vive detras del
-    // icono de engranaje en vez de una pestana fija del menu.
+   
 
     function abrirModalConfiguracion() {
         const overlay = document.createElement('div');

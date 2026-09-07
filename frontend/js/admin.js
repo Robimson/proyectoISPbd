@@ -201,23 +201,10 @@
         }
     }
 
-    // Estados en los que tiene sentido asignar o reasignar. "Pendiente" es
-    // asignacion inicial (sin motivo); en los otros dos ya hay alguien
-    // trabajando la solicitud, asi que es una REasignacion - por ejemplo, el
-    // tecnico reporto que el problema es mas grande de lo que puede resolver
-    // solo, y el administrador la pasa a otro tecnico o a un grupo. En
-    // "Resuelta - Pendiente Confirmacion" y "Cerrada" no se ofrece: no hay
-    // nada que reasignar mientras se espera al cliente o ya se cerro.
+    
     const ESTADOS_ASIGNABLES = ['Pendiente', 'En Proceso', 'Pendiente Aprobación'];
 
-    /**
-     * HTML del formulario de Asignar/Reasignar que se agrega al final del
-     * modal de "Ver detalles" (via `extraHtml` de abrirModalDetalleSolicitud).
-     * Antes esto vivia en un panel flotante aparte (panel-asignar): el
-     * administrador tenia que acordarse que decia la solicitud para poder
-     * asignarla bien. Ahora esta en la misma pantalla que ya muestra todo el
-     * contexto (descripcion, reportes, etc.).
-     */
+   
     function htmlFormularioAsignar(detalle) {
         if (ESTADOS_ASIGNABLES.indexOf(detalle.estado) === -1) return '';
 
@@ -259,11 +246,7 @@
             '</form>';
     }
 
-    /**
-     * Engancha el formulario que dibujo htmlFormularioAsignar() - se llama
-     * despues de pintar el modal completo (via `alRenderizar`). No hace nada
-     * si el estado actual no admite asignar (el formulario ni se dibujo).
-     */
+   
     function wireFormularioAsignar(cuerpo, detalle, cerrar) {
         const form = cuerpo.querySelector('#form-asignar-modal');
         if (!form) return;
@@ -400,14 +383,7 @@
         }
     }
 
-    /**
-     * Antes de esta funcion, el Administrador aprobaba o rechazaba un
-     * reporte sin ver ninguna evidencia (ni la del cliente al crear el
-     * ticket, ni la del tecnico al resolverlo) - aprobaba a ciegas, solo con
-     * el texto del reporte. El backend (AdjuntoController) ya dejaba pasar a
-     * ADMINISTRADOR/SUPERUSUARIO para cualquier solicitud, asi que esto es
-     * pura pantalla nueva, sin tocar SQL ni backend.
-     */
+    
     async function abrirModalEvidencias(idSolicitud) {
         const overlay = document.createElement('div');
         overlay.className = 'overlay-modal';
@@ -596,13 +572,7 @@
         }
     }
 
-    // ---------- Anuncios globales (seccion 2.3) ----------
-    // La tabla ya existia en el esquema original pero nunca se habia
-    // conectado a ningun procedimiento ni pantalla - el objetivo es que un
-    // corte masivo se comunique una sola vez en vez de que cada cliente cree
-    // su propio ticket duplicado. Vive en un modal (no en su propia pestaña)
-    // porque no es algo que se use a diario, igual que "Editar grupo" en
-    // Superusuario.
+   
 
     function filaAnuncio(a) {
         const claseBadge = a.estaActivo ? 'badge-activo' : 'badge-inactivo';

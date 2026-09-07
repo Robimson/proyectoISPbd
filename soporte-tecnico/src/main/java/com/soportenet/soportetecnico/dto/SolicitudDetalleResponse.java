@@ -6,14 +6,7 @@ import com.soportenet.soportetecnico.entity.Solicitud;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/**
- * DTO de salida para la pantalla "Ver detalles de solicitud" (GET
- * /api/solicitudes/{id}). Es mas rico que SolicitudResponse (el que usan las
- * tablas paginadas) a proposito: una vista de detalle es una sola fila, asi
- * que aca si vale la pena resolver cliente, asignacion vigente y reportes -
- * hacerlo tambien en las listas paginadas dispararia N+1 consultas por
- * pagina.
- */
+
 public class SolicitudDetalleResponse {
 
     private final Long idSolicitud;
@@ -68,11 +61,7 @@ public class SolicitudDetalleResponse {
         this.reportes = reportes;
     }
 
-    /**
-     * Arma el DTO a partir de la entidad y, opcionalmente, la asignacion
-     * vigente (null si la solicitud todavia no fue asignada) y sus reportes
-     * de solucion (lista vacia si el tecnico todavia no envio ninguno).
-     */
+  
     public static SolicitudDetalleResponse construir(Solicitud s, AsignacionSolicitud asignacionVigente,
                                                        List<ReporteResponse> reportes) {
         boolean tieneTecnico = asignacionVigente != null && asignacionVigente.getTecnico() != null;

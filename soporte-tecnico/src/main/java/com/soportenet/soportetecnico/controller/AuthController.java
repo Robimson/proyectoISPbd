@@ -28,12 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Login (caso de uso 4.1.2 del documento). Como el JWT no tiene estado en el
- * servidor, "cerrar sesion" real (invalidar el token) sigue siendo
- * responsabilidad del cliente (descartarlo) - /logout aqui solo cierra el
- * registro de auditoria_sesion (fecha_salida), no invalida el token.
- */
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -92,25 +87,15 @@ public class AuthController {
                     .orElse(null);
         }
 
-        // Auditoria de sesiones (seccion 11): queda registrada la entrada y
-        // desde donde, y el id_sesion vuelve al frontend para poder cerrar
-        // el registro con /logout mas adelante.
+        
         Long idSesion = auditoriaSesionRepository.abrirSesion(usuario.getIdUsuario(), httpRequest.getRemoteAddr());
 
-        // El enum RolUsuario esta declarado en minusculas (coincide con el
-        // ENUM de Postgres), pero el frontend y hasRole(...) del backend
-        // trabajan con el rol en mayusculas (ROLE_SUPERUSUARIO, etc.) - se
-        // normaliza aqui para que el frontend no tenga que adivinar el caso.
+        
         return ResponseEntity.ok(new LoginResponse(
                 token, usuario.getIdUsuario(), usuario.getRol().name().toUpperCase(), estadoPago, idSesion));
     }
 
-    /**
-     * Cierra el registro de auditoria_sesion (fecha_salida). No invalida el
-     * JWT (sigue siendo valido hasta que expire por su cuenta) - es solo
-     * para que la pantalla de auditoria del Superusuario refleje cuando
-     * alguien cerro sesion desde la app.
-     */
+    
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestBody(required = false) LogoutRequest request) {
         if (request != null && request.getIdSesion() != null) {
@@ -119,11 +104,7 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * "Olvide mi contrasena". La respuesta es siempre el mismo mensaje
-     * generico, exista o no ese correo en el sistema (evita que el
-     * formulario se use para averiguar que correos estan registrados).
-     */
+    
     @PostMapping("/recuperacion")
     @Transactional
     public ResponseEntity<Map<String, String>> solicitarRecuperacion(
@@ -150,12 +131,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("mensaje", MENSAJE_RECUPERACION_GENERICO));
     }
 
-    /**
-     * Segunda mitad de "olvide mi contrasena": define la contrasena nueva a
-     * partir del token que llego por correo. Reutiliza ActivarCuentaRequest
-     * porque la forma es identica (token + contrasena con la misma
-     * validacion minima).
-     */
+    
     @PostMapping("/restablecer")
     @Transactional
     public ResponseEntity<Map<String, String>> restablecer(@Valid @RequestBody ActivarCuentaRequest request) {

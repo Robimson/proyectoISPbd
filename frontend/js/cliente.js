@@ -203,12 +203,7 @@
         }
     }
 
-    // El input nativo <input type="file" multiple> REEMPLAZA toda la
-    // seleccion cada vez que se abre el dialogo - no la suma. Eso es normal
-    // en todos los navegadores (no un bug), pero como UX confunde: el
-    // usuario espera poder ir agregando de a un archivo. Por eso se
-    // acumulan en este arreglo propio en vez de leer input.files
-    // directamente al enviar el formulario.
+    
     let archivosNuevaSolicitud = [];
     const inputAdjuntosNueva = document.getElementById('adjuntos-nueva-solicitud');
     const listaAdjuntosNueva = document.getElementById('lista-adjuntos-nueva-solicitud');

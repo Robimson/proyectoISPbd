@@ -74,12 +74,7 @@ function exigirSesion(rolEsperado) {
     return true;
 }
 
-/**
- * Cierra el registro de auditoria_sesion (fecha_salida) antes de borrar la
- * sesion local. Es "mejor esfuerzo": si el backend no responde, igual se
- * cierra la sesion en el navegador - no vale la pena bloquear al usuario
- * por esto.
- */
+
 async function cerrarSesion() {
     const idSesion = obtenerIdSesion();
     if (idSesion) {
@@ -116,11 +111,7 @@ async function apiFetch(path, options = {}) {
         throw new Error('No se pudo conectar con el servidor. ¿Esta corriendo el backend en ' + API_BASE + '?');
     }
 
-    // Solo se trata como "sesion vencida" si la llamada llevaba un token:
-    // el propio /api/auth/login tambien responde 401 cuando la contrasena
-    // es incorrecta, y ese caso NO lleva token - debe mostrarse como error
-    // normal en el formulario, no mandar de vuelta a login.html (eso hacia
-    // que la pantalla de login "no cargara" al fallar el intento).
+    
     if (respuesta.status === 401 && token) {
         limpiarSesion();
         window.location.href = 'login.html';
@@ -183,12 +174,7 @@ function claseBadgeEstadoPago(estadoPago) {
     return estadoPago === 'moroso' ? 'badge-moroso' : 'badge-al_dia';
 }
 
-/**
- * Clase de color para el numero grande de una tarjeta de metrica, segun 2
- * umbrales ("atencion" en ambar, "alerta" en rojo) - para que un numero alto
- * salte a la vista sin tener que leer la etiqueta. Sin umbral superado
- * devuelve '' (color normal).
- */
+
 function claseAlertaPorValor(valor, umbralAtencion, umbralAlerta) {
     if (typeof valor !== 'number') return '';
     if (valor >= umbralAlerta) return 'valor-alerta';
@@ -219,13 +205,7 @@ function formatearFecha(fechaIso) {
     return fecha.toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-/**
- * Convierte la barra lateral en pestañas reales: al hacer clic en un link
- * se muestra SOLO esa seccion (#id) y se ocultan las demas, en vez de
- * simplemente saltar con scroll. Por defecto queda visible la primera
- * seccion (el resumen de metricas de cada panel). Se llama una vez al
- * cargar cada panel; no hace nada si la pagina no tiene barra lateral.
- */
+
 function activarNavegacionPorTabs() {
     const enlaces = document.querySelectorAll('.sidebar-nav a[href^="#"]');
     const secciones = Array.from(enlaces)
@@ -325,11 +305,7 @@ function confirmarAccion(titulo, mensaje, textoConfirmar) {
     });
 }
 
-/**
- * Engancha el boton "Cambiar contraseña" del sidebar-pie (presente en los
- * cuatro paneles) a un modal propio. No necesita config por pagina porque
- * siempre habla del usuario logeado (sale del JWT en el backend).
- */
+
 function activarModalCambiarContrasena() {
     const boton = document.getElementById('btn-cambiar-contrasena');
     if (!boton) return;
@@ -414,17 +390,7 @@ function activarModalCambiarContrasena() {
     });
 }
 
-/**
- * Convierte un <input type="text"> + un <div> de sugerencias en un selector
- * "buscable" que filtra EN EL CLIENTE sobre una lista ya cargada - sin ir al
- * servidor por cada letra. Pensado para listas chicas (grupos técnicos,
- * categorías, etc.), nunca para miles de registros: ahí lo que hace falta es
- * buscar en el servidor, ver activarBusquedaRemota().
- *
- * Uso: const selector = activarSelectorBuscable('input-id', 'sugerencias-id');
- * selector.setOpciones([{valor: '1', etiqueta: 'Grupo Alfa'}, ...]);
- * selector.valor() -> el valor elegido, o null si todavía no eligió nada.
- */
+
 function activarSelectorBuscable(idInput, idSugerencias) {
     const input = document.getElementById(idInput);
     const sugerencias = document.getElementById(idSugerencias);
@@ -477,14 +443,7 @@ function activarSelectorBuscable(idInput, idSugerencias) {
     };
 }
 
-/**
- * Igual que activarSelectorBuscable(), pero para listas grandes: en vez de
- * filtrar sobre una lista ya cargada, pide al servidor con un debounce de
- * 300ms (para no mandar una petición por cada letra) usando la funcion
- * `fnBuscar(termino)` que se le pasa. Cada resultado debe traer al menos
- * {idUsuario, nombreUsuario, correo} (la forma que ya devuelven
- * /api/tecnicos/buscar y /api/auditoria/usuarios/buscar).
- */
+
 function activarBusquedaRemota(idInput, idSugerencias, fnBuscar, callbacks) {
     const input = document.getElementById(idInput);
     const sugerencias = document.getElementById(idSugerencias);
@@ -544,17 +503,7 @@ function activarBusquedaRemota(idInput, idSugerencias, fnBuscar, callbacks) {
     };
 }
 
-/**
- * Muestra un adjunto en un visor flotante (modal) en vez de una pestaña
- * nueva - una imagen se ve directo, un PDF se embebe en un iframe. El
- * archivo se pide con fetch autenticado (un <img>/<iframe> comun no manda el
- * header Authorization, asi que no puede apuntar directo a la URL del
- * backend) y se muestra como blob. Se usa desde todos los lugares donde se
- * lista evidencia: el panel de Adjuntos de cliente/tecnico, "Ver evidencias"
- * de administrador y "Ver detalles de solicitud" de los 3 roles - todos
- * pasan por esta misma funcion, asi que el comportamiento queda igual en
- * cualquier pantalla.
- */
+
 async function abrirVisorArchivo(rutaApi, nombreArchivo, tipoArchivo) {
     const overlay = document.createElement('div');
     overlay.className = 'overlay-modal';
@@ -616,13 +565,7 @@ async function abrirVisorArchivo(rutaApi, nombreArchivo, tipoArchivo) {
     }
 }
 
-/**
- * Sube un archivo de evidencia a una solicitud. Fetch crudo (no apiFetch)
- * porque el archivo va como FormData: el navegador debe fijar el
- * Content-Type con el boundary el mismo, no se puede fijar a mano. La usan
- * tanto activarPanelAdjuntos() (subir evidencia a una solicitud ya creada)
- * como el formulario de "Nueva solicitud" (adjuntar evidencia al crearla).
- */
+
 async function subirAdjunto(idSolicitud, archivo) {
     const datosFormulario = new FormData();
     datosFormulario.append('archivo', archivo);
@@ -650,12 +593,7 @@ async function subirAdjunto(idSolicitud, archivo) {
     return cuerpo;
 }
 
-/**
- * Conecta un panel de adjuntos (subir/listar/descargar evidencia) a los ids
- * que se le pasen en `config`. Se usa igual desde cliente.js y tecnico.js -
- * ambos roles pueden subir evidencia a una solicitud. Devuelve una funcion
- * `abrir(idSolicitud)` para invocar desde el boton "Adjuntos" de cada fila.
- */
+
 function activarPanelAdjuntos(config) {
     const panel = document.getElementById(config.idPanel);
     const idSolicitudSpan = document.getElementById(config.idSpanSolicitud);
@@ -695,11 +633,7 @@ function activarPanelAdjuntos(config) {
         }
     }
 
-    /**
-     * Muestra el adjunto en el visor flotante (abrirVisorArchivo) en vez de
-     * una pestaña nueva - se ve mejor y no depende de que el navegador
-     * permita ventanas emergentes.
-     */
+    
     async function abrirArchivoAdjunto(boton) {
         const idAdjunto = boton.getAttribute('data-id');
         await abrirVisorArchivo(
@@ -749,10 +683,7 @@ function activarPanelAdjuntos(config) {
     };
 }
 
-/**
- * Icono segun el tipo MIME de un adjunto - lo usan tanto el modal de
- * evidencias del administrador como el de "Ver detalles de solicitud".
- */
+
 function iconoParaTipoAdjunto(tipo) {
     if (!tipo) return '📎';
     if (tipo.startsWith('image/')) return '🖼️';
@@ -760,12 +691,7 @@ function iconoParaTipoAdjunto(tipo) {
     return '📎';
 }
 
-/**
- * Carga y dibuja, dentro de `contenedor`, la lista de adjuntos (evidencia)
- * de una solicitud con un boton "Ver" en cada uno. Factorizado de
- * abrirModalEvidencias (admin.js) para que "Ver detalles de solicitud" no
- * tenga que repetir la misma logica.
- */
+
 async function cargarListaAdjuntos(idSolicitud, contenedor) {
     const adjuntos = await apiFetch('/api/solicitudes/' + idSolicitud + '/adjuntos');
 
@@ -789,26 +715,7 @@ async function cargarListaAdjuntos(idSolicitud, contenedor) {
     });
 }
 
-/**
- * Modal "Ver detalles de solicitud": trae todo lo que hay sobre un ticket en
- * una sola pantalla (datos generales, cliente, quien la tiene asignada,
- * historial de reportes de solucion y evidencias adjuntas) - antes esta
- * informacion estaba repartida y bastante de ella no se podia ver desde
- * ninguna pantalla (GET /api/solicitudes/{id} ya existia y ya tenia toda la
- * autorizacion por rol, pero ninguna pagina lo llamaba). Se usa igual desde
- * admin.js, tecnico.js y cliente.js - el backend decide que puede ver cada
- * rol, aca solo se dibuja lo que llegue.
- *
- * `opciones` (todas opcionales) permite que una pagina agregue contenido
- * propio SIN que este archivo tenga que saber nada especifico de un rol:
- *   - extraHtml(detalle): string de HTML que se agrega al final del cuerpo.
- *   - alRenderizar(cuerpo, detalle, cerrar): corre despues de pintar todo
- *     (incluidas las evidencias) - aca la pagina que llamo engancha sus
- *     propios listeners contra lo que agrego en extraHtml. Recibe `cerrar`
- *     para poder cerrar el modal el mismo (ej. al confirmar una asignacion).
- * Lo usa admin.js para meter el formulario de Asignar/Reasignar adentro del
- * mismo modal - antes vivia aparte, sin ver la descripcion de la solicitud.
- */
+
 async function abrirModalDetalleSolicitud(idSolicitud, opciones) {
     opciones = opciones || {};
     const overlay = document.createElement('div');
@@ -917,12 +824,7 @@ async function abrirModalDetalleSolicitud(idSolicitud, opciones) {
     }
 }
 
-/**
- * Carga y muestra los anuncios globales activos (banner arriba de cada
- * panel) - se llama igual desde los 4 roles, todos los ven. GET /api/anuncios
- * ya filtra por esta_activo=true y no vencidos, asi que aca solo se dibuja
- * lo que venga.
- */
+
 async function cargarAnunciosActivos(idContenedor) {
     const contenedor = document.getElementById(idContenedor);
     if (!contenedor) return;
@@ -941,12 +843,7 @@ async function cargarAnunciosActivos(idContenedor) {
     }
 }
 
-/**
- * Aclara (porcentaje > 0, hacia blanco) u oscurece (porcentaje < 0, hacia
- * negro) un color hexadecimal - para derivar el "hover" y la version
- * "suave" del color de marca a partir del unico color que elige el
- * Superusuario.
- */
+
 function ajustarColor(hex, porcentaje) {
     const numero = parseInt(hex.slice(1), 16);
     let r = (numero >> 16) & 255, g = (numero >> 8) & 255, b = numero & 255;
@@ -966,12 +863,7 @@ function ajustarColor(hex, porcentaje) {
     }).join('');
 }
 
-/**
- * Aplica la configuracion de marca (nombre del negocio, logo, color) a la
- * pagina actual - se llama igual desde las 8 paginas, incluido login.html
- * (por eso usa fetch crudo, no apiFetch: tiene que funcionar SIN sesion).
- * Nunca bloquea la carga de la pagina si falla - es cosmetico, no critico.
- */
+
 async function aplicarConfiguracionSistema() {
     try {
         const respuesta = await fetch(API_BASE + '/api/configuracion');
@@ -999,12 +891,7 @@ async function aplicarConfiguracionSistema() {
             const version = config.fechaModificacion ? '?v=' + encodeURIComponent(config.fechaModificacion) : '';
             document.querySelectorAll('.logo-negocio').forEach(function (img) {
                 img.src = API_BASE + config.logoUrl + version;
-                // .auth-logo y .sidebar-marca .logo img tienen un filtro
-                // (brightness(0) invert(1)) pensado para el icono por
-                // defecto (lo vuelve blanco solido sobre el fondo oscuro).
-                // Aplicado a un logo real subido por el usuario, lo vuelve
-                // un cuadrado blanco sin contenido - se quita para el logo
-                // personalizado, que se muestra con sus colores reales.
+                
                 img.style.filter = 'none';
             });
         }
@@ -1025,14 +912,7 @@ async function aplicarConfiguracionSistema() {
     }
 }
 
-/**
- * Dibuja un grafico de barras horizontal simple - un <div> por barra, con su
- * ancho como porcentaje del valor mas alto del propio conjunto. Sin ninguna
- * libreria (mismo criterio "todo hecho a mano" del resto del proyecto).
- * `datos` es un arreglo de ConteoProjection ({etiqueta, valor}) tal cual
- * vienen del backend. Se usa para comparar cantidades entre pocas categorias
- * (prioridad, categoria, carga de trabajo...).
- */
+
 function graficoBarras(datos) {
     if (!datos || !datos.length || datos.every(function (d) { return Number(d.valor) === 0; })) {
         return '<div class="vacio">Todavía no hay datos suficientes.</div>';
@@ -1052,12 +932,7 @@ function graficoBarras(datos) {
 
 const PALETA_DONA = ['#0f766e', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#059669'];
 
-/**
- * Dibuja un grafico de dona (circular) con un conic-gradient de CSS - sin
- * ninguna libreria. `datos` es un arreglo de ConteoProjection. Pensado para
- * pocas categorias (2 a 4) donde la proporcion del total comunica mejor que
- * comparar cantidades (ej. aprobados vs rechazados, tecnicos por nivel).
- */
+
 function graficoDona(datos) {
     const total = (datos || []).reduce(function (suma, d) { return suma + Number(d.valor); }, 0);
     if (!total) {

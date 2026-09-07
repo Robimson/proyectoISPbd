@@ -15,12 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Estado de pago del cliente (seccion 7.4 del documento): uso unicamente
- * informativo para que el Administrador lo tenga en cuenta al priorizar -
- * nunca bloquea ni cierra solicitudes automaticamente. Si se marca como
- * moroso, se le avisa por correo (no se suspende nada por si solo).
- */
+
 @RestController
 @RequestMapping("/api/clientes")
 public class ClienteController {
@@ -39,12 +34,7 @@ public class ClienteController {
         return ResponseEntity.ok(pagina.map(ClienteResponse::fromEntity));
     }
 
-    /**
-     * Cliente: sus propios datos, usados para precargar la direccion en el
-     * formulario de "Nueva solicitud" con la ultima que uso (sp_crear_solicitud
-     * la va actualizando en cada ticket). idCliente sale del JWT, nunca de un
-     * path variable, asi que un cliente nunca puede pedir el perfil de otro.
-     */
+    
     @GetMapping("/mi-perfil")
     public ResponseEntity<ClienteResponse> miPerfil(Authentication authentication) {
         Long idCliente = Long.valueOf(authentication.getName());

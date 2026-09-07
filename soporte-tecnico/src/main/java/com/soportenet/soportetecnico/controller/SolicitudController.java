@@ -167,11 +167,7 @@ public class SolicitudController {
         if (tieneRol(authentication, "ADMINISTRADOR")
                 || tieneRol(authentication, "SUPERUSUARIO")) {
 
-            // El admin ve una cola de trabajo, no un feed cronologico - ver
-            // el comentario en SolicitudRepository.findTodasOrdenadoParaAdmin.
-            // El orden ya queda fijo en esa consulta nativa, asi que aca se
-            // ignora el sort que trae el Pageable (el de @PageableDefault
-            // abajo es para el Cliente) y solo se reusan pagina/tamano.
+            
             Pageable paginaSinOrden = PageRequest.of(
                     pageable.getPageNumber(), pageable.getPageSize());
 
@@ -317,12 +313,7 @@ public class SolicitudController {
         );
     }
 
-    /**
-     * Administrador reabre administrativamente un ticket Cerrada, que
-     * vuelve a "En Proceso". La validacion de que quien pide esto es un
-     * administrador activo y de que el ticket realmente este Cerrada vive
-     * en sp_reabrir_ticket_cerrado_administrativo.
-     */
+    
     @PostMapping("/{id}/reapertura")
     @Transactional
     public ResponseEntity<SolicitudResponse> reabrir(

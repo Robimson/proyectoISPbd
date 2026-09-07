@@ -10,12 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
-/**
- * Los procedimientos en PostgreSQL usan RAISE EXCEPTION para reglas de negocio
- * (ej: "El cliente no tiene una cuenta activa"). Sin este manejador, esos
- * errores llegarian al cliente HTTP como un 500 crudo con stacktrace.
- * Aqui los convertimos en respuestas 400 con el mensaje real de negocio.
- */
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -32,15 +27,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", extraerMensajePostgres(ex)));
     }
 
-    /**
-     * Red de seguridad: la mayoria de los RAISE EXCEPTION de los procedimientos
-     * no llevan USING ERRCODE, asi que Postgres les asigna el codigo generico
-     * P0001. Ese codigo no cae en DataIntegrityViolationException ni en
-     * InvalidDataAccessResourceUsageException (los dos handlers de arriba),
-     * asi que sin este catch-all esos errores de negocio llegaban como 500.
-     * DataAccessException es la superclase de ambos, por eso Spring solo entra
-     * aqui cuando ninguno de los handlers mas especificos aplico.
-     */
+    
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<Map<String, String>> handleDataAccessError(DataAccessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -57,11 +44,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", mensaje));
     }
 
-    /**
-     * Varios controladores usan IllegalStateException cuando una operacion
-     * se completo pero la entidad no se pudo volver a leer (caso extremo,
-     * casi nunca deberia pasar). Sin esto llegaba como 500 crudo.
-     */
+   
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

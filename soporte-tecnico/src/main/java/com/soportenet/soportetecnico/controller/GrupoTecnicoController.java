@@ -14,12 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Creacion y administracion de grupos tecnicos (caso de uso 4.4.5 del
- * documento). GrupoTecnico no tiene relaciones ni datos sensibles, asi que
- * se serializa la entidad directamente (a diferencia de Solicitud/Usuario,
- * que siempre usan un DTO de salida).
- */
+
 @RestController
 @RequestMapping("/api/grupos-tecnicos")
 public class GrupoTecnicoController {
@@ -36,20 +31,13 @@ public class GrupoTecnicoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
-    /**
-     * Incluye cuantos tecnicos tiene cada grupo (fn_grupos_tecnicos_con_conteo) -
-     * antes solo se veia el nombre, sin poder distinguir un grupo con 2
-     * tecnicos de uno con 15 solo mirando la lista.
-     */
+    
     @GetMapping
     public List<GrupoTecnicoConteoProjection> listar() {
         return grupoTecnicoRepository.listarConConteo();
     }
 
-    /**
-     * Tecnicos de un grupo puntual, para el modal "Editar grupo" del
-     * Superusuario (ver quien esta y poder quitarlo).
-     */
+   
     @GetMapping("/{idGrupo}/miembros")
     public List<UsuarioBusquedaProjection> listarMiembros(@PathVariable Long idGrupo) {
         return grupoTecnicoRepository.listarMiembros(idGrupo);

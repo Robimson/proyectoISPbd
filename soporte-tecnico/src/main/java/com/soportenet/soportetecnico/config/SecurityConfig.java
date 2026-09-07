@@ -17,18 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Fase 2 de autenticacion: cada endpoint exige el rol correspondiente segun
- * la seccion 2 del documento, y el JwtAuthenticationFilter corre antes del
- * filtro de login para dejar al usuario autenticado en el SecurityContext.
- *
- * No hay chequeo de "dueno del recurso" todavia (ej: que un Cliente solo
- * pueda ver SUS solicitudes, o que un Tecnico solo reporte tickets que
- * tiene asignados): eso vive en las validaciones de los procedimientos SQL
- * para las escrituras (sp_enviar_reporte, sp_confirmar_cliente, etc. ya
- * validan pertenencia/autorizacion), pero los GET de lectura por ahora solo
- * exigen estar autenticado, no ser el dueno especifico del recurso.
- */
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -38,13 +27,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * El frontend es HTML/JS plano servido desde un origen distinto al del
-     * backend (ej. Live Server en localhost:5500), asi que el navegador
-     * exige CORS. Se permite cualquier origen porque la autenticacion es
-     * por JWT en el header Authorization, no por cookies (no hay
-     * credenciales de navegador involucradas, asi que "*" es seguro aqui).
-     */
+    
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuracion = new CorsConfiguration();

@@ -4,14 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.OffsetDateTime;
 
-/**
- * Historial de asignaciones de una solicitud (append-only: nunca se
- * sobrescribe una fila anterior, ver comentario en el esquema SQL). Esta
- * entidad es de solo lectura desde Java - la fila nueva y el manejo de
- * "vigente" los hace sp_asignar_solicitud dentro de PostgreSQL, nunca un
- * INSERT/UPDATE desde aqui. Se usa para mostrar, en el detalle de una
- * solicitud, quien la tiene asignada ahora mismo.
- */
+
 @Entity
 @Table(name = "asignacion_solicitud")
 public class AsignacionSolicitud {
