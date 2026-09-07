@@ -12,6 +12,7 @@
     let paginaActual = 0;
 
     const mensajeErrorCrear = document.getElementById('mensaje-error-crear');
+    const mensajeExitoCrear = document.getElementById('mensaje-exito-crear');
     const mensajeErrorLista = document.getElementById('mensaje-error-lista');
     const contenedorTabla = document.getElementById('contenedor-tabla');
     const paginacion = document.getElementById('paginacion');
@@ -112,7 +113,7 @@
         const claseBadge = claseBadgeEstado(s.estado);
         let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-ver-detalle secundario btn-compacto">Ver detalles</button>';
         if (s.estado !== 'Cerrada') {
-            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario btn-compacto">Adjuntos</button>';
+            acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario btn-compacto">Ver adjuntos</button>';
         }
         if (s.estado === 'Resuelta - Pendiente Confirmación del Cliente') {
             acciones +=
@@ -335,6 +336,12 @@
     document.getElementById('form-crear').addEventListener('submit', async function (evento) {
         evento.preventDefault();
         ocultarMensaje(mensajeErrorCrear);
+        ocultarMensaje(mensajeExitoCrear);
+
+        const descripcion = document.getElementById('descripcion').value.trim();
+        const direccion = document.getElementById('direccion').value.trim();
+        const idCategoriaValor = document.getElementById('categoria').value;
+        const archivos = archivosNuevaSolicitud;
 
         const btnCrear = document.getElementById('btn-crear');
         btnCrear.disabled = true;
@@ -364,16 +371,23 @@
                 if (fallidos.length) {
                     mostrarError(mensajeErrorCrear, new Error(
                         'La solicitud #' + creada.idSolicitud + ' se creó, pero ' + fallidos.length +
-                        ' archivo(s) no se pudieron subir. Podés agregarlos después con el botón "Adjuntos" en la lista.'
+                        ' archivo(s) no se pudieron subir. Contactá a soporte si necesitás agregarlos.'
                     ));
                 }
             }
 
+            // Aviso de éxito para que el usuario sepa que la solicitud quedó creada.
+            // Se oculta solo despues de unos segundos para que no quede pegado en pantalla.
+            mensajeExitoCrear.textContent = '✅ Solicitud #' + creada.idSolicitud + ' creada correctamente.';
+            mensajeExitoCrear.classList.remove('oculto');
+            setTimeout(function () {
+                mensajeExitoCrear.classList.add('oculto');
+            }, 4000);
+
             document.getElementById('form-crear').reset();
-            // El reset() del form tambien vacia direccion; se vuelve a poner
-            // porque ya quedo guardada como "ultima conocida" en el servidor.
-            document.getElementById('direccion').value = direccion;
-            // reset() no vacia el arreglo propio de adjuntos acumulados.
+            // Antes acá se volvía a poner "direccion" en el campo después del
+            // reset(). Se quita para que el campo quede vacío, tal como se pidió:
+            // ya no se restaura el valor anterior.
             archivosNuevaSolicitud = [];
             renderizarAdjuntosNuevaSolicitud();
             paginaActual = 0;
@@ -396,7 +410,6 @@
     cargarGraficos();
     cargarCategorias();
     cargarEstados();
-    cargarDireccionSugerida();
     cargarSolicitudes();
     activarNavegacionPorTabs();
 })();

@@ -43,9 +43,6 @@
         try {
             const [estadisticas, grupos] = await Promise.all([
                 apiFetch('/api/dashboard/superusuario'),
-                // "Miembros por grupo" ya viene con el conteo en este mismo
-                // endpoint (GrupoTecnicoConteoProjection) - no hace falta un
-                // endpoint aparte solo para el grafico.
                 apiFetch('/api/grupos-tecnicos')
             ]);
             contenedorNivel.innerHTML = graficoDona(estadisticas.tecnicosPorNivel);
@@ -133,12 +130,6 @@
             '</tr>';
     }
 
-    /**
-     * Especialidad y nivel quedan en NULL / 'junior' desde que se invita al
-     * tecnico (sp_invitar_usuario) - este modal es el unico lugar que los
-     * llena o actualiza despues (sigue el mismo patron dinamico que
-     * activarModalCambiarContrasena en api.js).
-     */
     async function abrirModalPerfilTecnico(idTecnico, nombreTecnico) {
         let tecnicoActual = null;
         try {
@@ -293,11 +284,11 @@
 
             contenedorTablaGrupos.innerHTML = grupos.length
                 ? '<div class="tabla-scroll"><table><thead><tr><th>ID</th><th>Nombre</th><th># Técnicos</th><th></th></tr></thead><tbody>' +
-                  grupos.map(function (g) {
-                      return '<tr><td>#' + g.idGrupo + '</td><td>' + escaparHtml(g.nombreGrupo) + '</td><td>' + g.totalTecnicos + '</td>' +
-                          '<td><button class="btn-editar-grupo secundario" data-id="' + g.idGrupo + '" data-nombre="' + escaparHtml(g.nombreGrupo) + '">Editar</button></td></tr>';
-                  }).join('') +
-                  '</tbody></table></div>'
+                grupos.map(function (g) {
+                    return '<tr><td>#' + g.idGrupo + '</td><td>' + escaparHtml(g.nombreGrupo) + '</td><td>' + g.totalTecnicos + '</td>' +
+                        '<td><button class="btn-editar-grupo secundario" data-id="' + g.idGrupo + '" data-nombre="' + escaparHtml(g.nombreGrupo) + '">Editar</button></td></tr>';
+                }).join('') +
+                '</tbody></table></div>'
                 : '<div class="vacio">Todavía no hay grupos técnicos.</div>';
 
             contenedorTablaGrupos.querySelectorAll('.btn-editar-grupo').forEach(function (boton) {
@@ -327,15 +318,6 @@
         }
     });
 
-    /**
-     * Modal "Editar grupo": dos pantallas dentro del mismo modal, no todo
-     * junto (mezclar "quién ya está" con "buscar para agregar" en un solo
-     * bloque resultaba confuso). Por defecto se ve la lista de miembros
-     * (con "Quitar" - DELETE .../miembros/{id} ya existía en el backend
-     * pero no se podía usar desde ninguna pantalla); "+ Agregar técnico"
-     * cambia a la pantalla de búsqueda, que reemplaza a la lista mientras
-     * está activa. "Volver" regresa a la lista ya actualizada.
-     */
     async function abrirModalEditarGrupo(idGrupo, nombreGrupo) {
         const overlay = document.createElement('div');
         overlay.className = 'overlay-modal';
@@ -377,10 +359,6 @@
             if (evento.key === 'Escape') cerrar();
         }
 
-        // Se agrega al documento ANTES de conectar activarBusquedaRemota():
-        // esa funcion busca sus elementos con document.getElementById(), que
-        // no los encuentra mientras el modal solo existe como overlay.innerHTML
-        // (todavia no forma parte del documento vivo).
         document.body.appendChild(overlay);
 
         overlay.addEventListener('click', function (evento) {
@@ -463,8 +441,6 @@
                     method: 'POST',
                     body: JSON.stringify({ idTecnico: Number(idTecnico) })
                 });
-                // Se queda en esta pantalla para poder agregar varios seguidos
-                // sin ir y volver cada vez; "Volver a la lista" ya refresca.
                 mensajeAgregado.textContent = 'Técnico agregado. Podés seguir agregando más.';
                 mensajeAgregado.classList.remove('oculto');
                 selectorTecnico.limpiar();
@@ -475,6 +451,282 @@
 
         cargarMiembros();
     }
+
+    // ---------- Respaldos ----------
+    let paginaRespaldos = 0;
+    let monitoreoRespaldoActivo = null;
+    const mensajeErrorRespaldos = document.getElementById('mensaje-error-respaldos');
+    const mensajeExitoRespaldos = document.getElementById('mensaje-exito-respaldos');
+    const contenedorTablaRespaldos = document.getElementById('contenedor-tabla-respaldos');
+    const paginacionRespaldos = document.getElementById('paginacion-respaldos');
+    const filtroTipoRespaldo = document.getElementById('filtro-tipo-respaldo');
+    const estadoGenerandoRespaldo = document.getElementById('estado-generando-respaldo');
+
+    function formatearTamano(bytes) {
+        if (bytes === null || bytes === undefined) return '—';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    }
+
+    function claseBadgeEstadoRespaldo(estado) {
+        if (estado === 'COMPLETADO') return 'badge-activo';
+        if (estado === 'EN_PROCESO') return 'badge-en-proceso';
+        return 'badge-suspendido';
+    }
+
+    function filaRespaldo(r) {
+        const badgeTipo = r.tipo === 'FULL' ? 'badge-pendiente-aprobacion' : 'badge-al_dia';
+        let accion = '—';
+        if (r.estado === 'COMPLETADO') {
+            accion = '<button type="button" class="secundario btn-compacto btn-descargar-respaldo" data-id="' + r.idRespaldo + '" data-tipo="' + r.tipo + '" data-fecha="' + r.fechaInicio + '">Descargar</button>';
+        }
+        return '<tr>' +
+            '<td><span class="badge ' + badgeTipo + '">' + (r.tipo === 'FULL' ? 'Full' : 'Incremental') + '</span></td>' +
+            '<td>' + formatearFecha(r.fechaInicio) + '</td>' +
+            '<td>' + formatearTamano(r.tamanoBytes) + '</td>' +
+            '<td><span class="badge ' + claseBadgeEstadoRespaldo(r.estado) + '">' + r.estado + '</span></td>' +
+            '<td>' + (r.generadoManualmente ? 'Manual' : 'Automático') + '</td>' +
+            '<td>' + accion + '</td>' +
+            '</tr>';
+    }
+
+    /**
+     * Arma el nombre del archivo con la fecha del respaldo en el propio
+     * navegador, en vez de depender del header Content-Disposition: ese
+     * header requiere que el backend agregue Access-Control-Expose-Headers
+     * para poder leerse desde fetch() entre distinto puerto/origen, y sin
+     * eso el nombre siempre caia al valor por defecto sin fecha.
+     *
+     * Tanto FULL como WAL llegan del backend como un .zip real y valido: el
+     * FULL ya se arma comprimido en el servidor, y el WAL se envuelve en un
+     * zip al vuelo en el momento de la descarga (el archivo original en
+     * wal_archive nunca se toca).
+     */
+    function nombreArchivoRespaldo(tipo, fechaIso, idRespaldo) {
+        const fecha = new Date(fechaIso);
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        const marca = fecha.getFullYear() + '-' + pad(fecha.getMonth() + 1) + '-' + pad(fecha.getDate()) +
+            '_' + pad(fecha.getHours()) + '-' + pad(fecha.getMinutes());
+        const prefijo = tipo === 'FULL' ? 'full' : 'wal';
+        return 'respaldo_' + prefijo + '_' + marca + '_' + idRespaldo + '.zip';
+    }
+
+    /**
+     * pg_basebackup no reporta un porcentaje que el backend pueda exponer
+     * facilmente por HTTP, asi que en vez de una barra con %, mostramos un
+     * spinner indeterminado mientras el estado siga EN_PROCESO - misma idea
+     * que .estado-cargando ya usa en el resto de la app para "Cargando...".
+     */
+    async function descargarRespaldo(id, tipo, fechaIso, boton) {
+        const textoOriginal = boton.textContent;
+        boton.disabled = true;
+        boton.textContent = 'Descargando...';
+        ocultarMensaje(mensajeErrorRespaldos);
+
+        try {
+            const headers = {};
+            const token = obtenerToken();
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            const respuesta = await fetch(API_BASE + '/api/respaldos/' + id + '/descargar', { headers: headers });
+
+            if (!respuesta.ok) {
+                throw new Error('No se pudo descargar el respaldo (código ' + respuesta.status + ').');
+            }
+
+            const nombreArchivo = nombreArchivoRespaldo(tipo, fechaIso, id);
+
+            const blob = await respuesta.blob();
+            const url = window.URL.createObjectURL(blob);
+            const enlaceTemporal = document.createElement('a');
+            enlaceTemporal.href = url;
+            enlaceTemporal.download = nombreArchivo;
+            document.body.appendChild(enlaceTemporal);
+            enlaceTemporal.click();
+            document.body.removeChild(enlaceTemporal);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            mostrarError(mensajeErrorRespaldos, error);
+        } finally {
+            boton.disabled = false;
+            boton.textContent = textoOriginal;
+        }
+    }
+
+    async function cargarRespaldos(opciones) {
+        opciones = opciones || {};
+        if (!opciones.silencioso) {
+            ocultarMensaje(mensajeErrorRespaldos);
+            contenedorTablaRespaldos.innerHTML = htmlCargando();
+        }
+        try {
+            let ruta = '/api/respaldos?page=' + paginaRespaldos + '&size=15';
+            if (filtroTipoRespaldo.value) ruta += '&tipo=' + filtroTipoRespaldo.value;
+
+            const pagina = await apiFetch(ruta);
+
+            if (!pagina.content || pagina.content.length === 0) {
+                contenedorTablaRespaldos.innerHTML = '<div class="vacio">Todavía no hay respaldos registrados.</div>';
+                paginacionRespaldos.innerHTML = '';
+                return pagina;
+            }
+
+            const filas = pagina.content.map(filaRespaldo).join('');
+            contenedorTablaRespaldos.innerHTML =
+                '<div class="tabla-scroll"><table><thead><tr>' +
+                '<th>Tipo</th><th>Fecha</th><th>Tamaño</th><th>Estado</th><th>Origen</th><th></th>' +
+                '</tr></thead><tbody>' + filas + '</tbody></table></div>';
+
+            contenedorTablaRespaldos.querySelectorAll('.btn-descargar-respaldo').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    descargarRespaldo(
+                        boton.getAttribute('data-id'),
+                        boton.getAttribute('data-tipo'),
+                        boton.getAttribute('data-fecha'),
+                        boton
+                    );
+                });
+            });
+
+            if (pagina.totalPages > 1) {
+                paginacionRespaldos.innerHTML =
+                    '<button class="secundario" id="btn-anterior-respaldos" ' + (pagina.first ? 'disabled' : '') + '>Anterior</button>' +
+                    '<span>Página ' + (pagina.number + 1) + ' de ' + pagina.totalPages + '</span>' +
+                    '<button class="secundario" id="btn-siguiente-respaldos" ' + (pagina.last ? 'disabled' : '') + '>Siguiente</button>';
+                const anterior = document.getElementById('btn-anterior-respaldos');
+                const siguiente = document.getElementById('btn-siguiente-respaldos');
+                if (anterior) anterior.addEventListener('click', function () { paginaRespaldos--; cargarRespaldos(); });
+                if (siguiente) siguiente.addEventListener('click', function () { paginaRespaldos++; cargarRespaldos(); });
+            } else {
+                paginacionRespaldos.innerHTML = '';
+            }
+
+            return pagina;
+        } catch (error) {
+            if (!opciones.silencioso) {
+                contenedorTablaRespaldos.innerHTML = '';
+                mostrarError(mensajeErrorRespaldos, error);
+            }
+        }
+    }
+
+    async function cargarConfiguracionRespaldo() {
+        try {
+            const config = await apiFetch('/api/respaldos/configuracion');
+            document.getElementById('hora-respaldo-full').value = config.horaRespaldoFull.substring(0, 5);
+            document.getElementById('frecuencia-respaldo-full').value = config.frecuencia;
+            document.getElementById('campo-dia-semana').classList.toggle('oculto', config.frecuencia !== 'SEMANAL');
+            if (config.diaSemanaFull !== null && config.diaSemanaFull !== undefined) {
+                document.getElementById('dia-semana-full').value = String(config.diaSemanaFull);
+            }
+        } catch (error) {
+            console.error('No se pudo cargar la configuración de respaldos:', error);
+        }
+    }
+
+    document.getElementById('frecuencia-respaldo-full').addEventListener('change', function () {
+        document.getElementById('campo-dia-semana').classList.toggle('oculto', this.value !== 'SEMANAL');
+    });
+
+    document.getElementById('form-config-respaldo').addEventListener('submit', async function (evento) {
+        evento.preventDefault();
+        const mensajeErrorConfig = document.getElementById('mensaje-error-config-respaldo');
+        const mensajeExitoConfig = document.getElementById('mensaje-exito-config-respaldo');
+        ocultarMensaje(mensajeErrorConfig);
+        ocultarMensaje(mensajeExitoConfig);
+
+        const btnGuardar = evento.target.querySelector('button[type="submit"]');
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Guardando...';
+
+        try {
+            const frecuencia = document.getElementById('frecuencia-respaldo-full').value;
+            await apiFetch('/api/respaldos/configuracion', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    horaRespaldoFull: document.getElementById('hora-respaldo-full').value + ':00',
+                    frecuencia: frecuencia,
+                    diaSemanaFull: frecuencia === 'SEMANAL' ? Number(document.getElementById('dia-semana-full').value) : null,
+                    activo: true
+                })
+            });
+            mensajeExitoConfig.textContent = 'Configuración de respaldos guardada.';
+            mensajeExitoConfig.classList.remove('oculto');
+            setTimeout(function () { ocultarMensaje(mensajeExitoConfig); }, 4000);
+        } catch (error) {
+            mostrarError(mensajeErrorConfig, error);
+        } finally {
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Guardar';
+        }
+    });
+
+    /**
+     * Revisa cada 5s si la fila del respaldo recien iniciado ya salio de
+     * EN_PROCESO. pg_basebackup no expone un progreso parcial por HTTP, asi
+     * que esto es lo mas cercano a una barra de progreso sin inventar un
+     * porcentaje falso.
+     */
+    function monitorearRespaldo(idRespaldo) {
+        if (monitoreoRespaldoActivo) clearInterval(monitoreoRespaldoActivo);
+
+        let intentos = 0;
+        monitoreoRespaldoActivo = setInterval(async function () {
+            intentos++;
+            const pagina = await cargarRespaldos();
+            const fila = pagina && pagina.content ? pagina.content.find(function (r) { return r.idRespaldo === idRespaldo; }) : null;
+
+            if (fila && fila.estado !== 'EN_PROCESO') {
+                clearInterval(monitoreoRespaldoActivo);
+                monitoreoRespaldoActivo = null;
+                estadoGenerandoRespaldo.classList.add('oculto');
+
+                if (fila.estado === 'COMPLETADO') {
+                    mensajeExitoRespaldos.textContent = 'Respaldo completo generado correctamente.';
+                    mensajeExitoRespaldos.classList.remove('oculto');
+                    setTimeout(function () { ocultarMensaje(mensajeExitoRespaldos); }, 4000);
+                } else {
+                    mostrarError(mensajeErrorRespaldos, new Error('El respaldo terminó con error. Revisá el detalle en la base o los logs del backend.'));
+                }
+                return;
+            }
+
+            if (intentos >= 60) {
+                clearInterval(monitoreoRespaldoActivo);
+                monitoreoRespaldoActivo = null;
+                estadoGenerandoRespaldo.classList.add('oculto');
+            }
+        }, 5000);
+    }
+
+    document.getElementById('btn-generar-full').addEventListener('click', async function () {
+        const boton = this;
+        boton.disabled = true;
+        boton.textContent = 'Generando...';
+        ocultarMensaje(mensajeErrorRespaldos);
+        ocultarMensaje(mensajeExitoRespaldos);
+        estadoGenerandoRespaldo.classList.remove('oculto');
+
+        try {
+            const creado = await apiFetch('/api/respaldos/full', { method: 'POST' });
+            paginaRespaldos = 0;
+            await cargarRespaldos();
+            monitorearRespaldo(creado.idRespaldo);
+        } catch (error) {
+            mostrarError(mensajeErrorRespaldos, error);
+            estadoGenerandoRespaldo.classList.add('oculto');
+        } finally {
+            boton.disabled = false;
+            boton.textContent = 'Generar respaldo ahora';
+        }
+    });
+
+    filtroTipoRespaldo.addEventListener('change', function () {
+        paginaRespaldos = 0;
+        cargarRespaldos();
+    });
 
     // ---------- Resumen de auditoria ----------
 
@@ -685,9 +937,6 @@
     }
 
     // ---------- Configuracion del sistema (nombre/logo/color de marca) ----------
-    // No es algo que se toque a diario (a lo sumo cuando el negocio cambia
-    // de nombre o quiere personalizar colores), por eso vive detras del
-    // icono de engranaje en vez de una pestana fija del menu.
 
     function abrirModalConfiguracion() {
         const overlay = document.createElement('div');
@@ -871,5 +1120,7 @@
     cargarResumenAuditoria();
     cargarSesiones();
     cargarDatos();
+    cargarConfiguracionRespaldo();
+    cargarRespaldos();
     activarNavegacionPorTabs();
 })();

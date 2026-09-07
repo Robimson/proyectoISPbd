@@ -300,6 +300,16 @@ button:disabled {
     font-size: 0.88rem;
 }
 
+.mensaje-exito {
+    background: #f0fdf4;
+    color: var(--color-exito);
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radio);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.88rem;
+}
+
 .mensaje-info {
     background: var(--color-primario-suave);
     color: var(--color-primario);
