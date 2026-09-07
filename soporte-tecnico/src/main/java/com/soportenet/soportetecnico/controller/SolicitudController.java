@@ -37,6 +37,7 @@ public class SolicitudController {
     private final AsignacionSolicitudRepository asignacionSolicitudRepository;
     private final ReporteSolicitudRepository reporteSolicitudRepository;
 
+
     public SolicitudController(SolicitudRepository solicitudRepository,
                                 AsignacionSolicitudRepository asignacionSolicitudRepository,
                                 ReporteSolicitudRepository reporteSolicitudRepository) {
@@ -58,7 +59,9 @@ public class SolicitudController {
                 idCliente,
                 request.getDescripcion(),
                 request.getIdCategoria(),
-                request.getDireccion()
+                request.getDireccion(),
+                request.getLat(),
+                request.getLng()
         );
 
         Solicitud creada = solicitudRepository.findById(idSolicitud)

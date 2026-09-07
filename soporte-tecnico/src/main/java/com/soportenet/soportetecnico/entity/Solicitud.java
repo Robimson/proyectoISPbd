@@ -1,8 +1,16 @@
 package com.soportenet.soportetecnico.entity;
 
-import jakarta.persistence.*;
-
 import java.time.OffsetDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 /**
  * Ticket de soporte: entidad central del sistema.
@@ -45,7 +53,21 @@ public class Solicitud {
     @Column(name = "direccion", length = 255)
     private String direccion;
 
-    
+    @Column(name = "lat")
+    private Double lat;
+
+    @Column(name = "lng")
+    private Double lng;
+
+    // Bloqueo optimista: OJO, aqui NO se usa @Version de JPA a proposito.
+    // El trigger fn_pre_update_solicitud() ya incrementa esta columna en la BD
+    // y rechaza el UPDATE si NEW.version llega distinto de OLD.version.
+    // Si usaramos @Version, Hibernate enviaria el UPDATE con version+1 ya
+    // calculado en el SET, y el trigger lo interpretaria como un conflicto
+    // falso (rechazaria TODAS las actualizaciones). Por eso este campo es de
+    // solo lectura desde JPA: se consulta, pero las actualizaciones reales se
+    // hacen con queries nativas que dejan la columna intacta en el SET,
+    // dejando que el trigger sea la unica fuente de verdad del incremento.
     @Column(name = "version", nullable = false, insertable = false, updatable = false)
     private Integer version;
 
@@ -122,6 +144,22 @@ public class Solicitud {
 
     public void setDireccion(String direccion) {
         this.direccion = direccion;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLng() {
+        return lng;
+    }
+
+    public void setLng(Double lng) {
+        this.lng = lng;
     }
 
     public Integer getVersion() {

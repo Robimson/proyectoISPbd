@@ -1759,6 +1759,405 @@ END;
 $$;
 
 
+--05/09
+
+
+CREATE TABLE IF NOT EXISTS configuracion_sistema (
+    id_configuracion         SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id_configuracion = 1),
+    nombre_negocio           VARCHAR(150) NOT NULL DEFAULT 'SoporteNet',
+    logo_url                 VARCHAR(500),
+    color_primario           VARCHAR(7),
+    id_administrador_modifico BIGINT REFERENCES usuario(id_usuario),
+    fecha_modificacion       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE configuracion_sistema IS 'Configuracion global de marca (nombre/logo/color) - fila unica, editable por el Superusuario. Publica sin login porque hasta la pantalla de login la necesita.';
+
+INSERT INTO configuracion_sistema (id_configuracion)
+VALUES (1)
+ON CONFLICT (id_configuracion) DO NOTHING;
+
+
+
+DROP FUNCTION IF EXISTS fn_obtener_configuracion_sistema();
+
+CREATE OR REPLACE FUNCTION fn_obtener_configuracion_sistema()
+RETURNS TABLE (
+    nombre_negocio      VARCHAR,
+    categoria           VARCHAR,
+    eslogan             VARCHAR,
+    logo_url            VARCHAR,
+    color_primario      VARCHAR,
+    fecha_modificacion  TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    RETURN QUERY
+    SELECT c.nombre_negocio, c.categoria, c.eslogan, c.logo_url, c.color_primario, c.fecha_modificacion
+    FROM configuracion_sistema c
+    WHERE c.id_configuracion = 1;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS sp_actualizar_configuracion_sistema(BIGINT, VARCHAR, VARCHAR);
+
+CREATE OR REPLACE FUNCTION sp_actualizar_configuracion_sistema(
+    p_id_superusuario  BIGINT,
+    p_nombre_negocio   VARCHAR,
+    p_categoria        VARCHAR,
+    p_eslogan          VARCHAR,
+    p_color_primario   VARCHAR
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM usuario
+        WHERE id_usuario = p_id_superusuario
+          AND rol = 'superusuario'
+          AND estado_cuenta = 'activo'
+    ) THEN
+        RAISE EXCEPTION 'El usuario % no es un superusuario activo.', p_id_superusuario;
+    END IF;
+
+    IF p_nombre_negocio IS NULL OR btrim(p_nombre_negocio) = '' THEN
+        RAISE EXCEPTION 'El nombre del negocio no puede estar vacio.';
+    END IF;
+
+    IF p_categoria IS NULL OR btrim(p_categoria) = '' THEN
+        RAISE EXCEPTION 'La categoria no puede estar vacia.';
+    END IF;
+
+    IF p_eslogan IS NULL OR btrim(p_eslogan) = '' THEN
+        RAISE EXCEPTION 'El eslogan no puede estar vacio.';
+    END IF;
+
+    IF p_color_primario IS NOT NULL AND p_color_primario !~ '^#[0-9A-Fa-f]{6}$' THEN
+        RAISE EXCEPTION 'El color debe ser un codigo hexadecimal valido (ej: #0d9488).';
+    END IF;
+
+    PERFORM set_config('app.usuario_actual', p_id_superusuario::TEXT, true);
+
+    UPDATE configuracion_sistema
+       SET nombre_negocio = btrim(p_nombre_negocio),
+           categoria = btrim(p_categoria),
+           eslogan = btrim(p_eslogan),
+           color_primario = p_color_primario,
+           id_administrador_modifico = p_id_superusuario,
+           fecha_modificacion = now()
+     WHERE id_configuracion = 1;
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION sp_actualizar_logo_sistema(
+    p_id_superusuario  BIGINT,
+    p_logo_url         VARCHAR
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM usuario
+        WHERE id_usuario = p_id_superusuario
+          AND rol = 'superusuario'
+          AND estado_cuenta = 'activo'
+    ) THEN
+        RAISE EXCEPTION 'El usuario % no es un superusuario activo.', p_id_superusuario;
+    END IF;
+
+    PERFORM set_config('app.usuario_actual', p_id_superusuario::TEXT, true);
+
+    UPDATE configuracion_sistema
+       SET logo_url = p_logo_url,
+           id_administrador_modifico = p_id_superusuario,
+           fecha_modificacion = now()
+     WHERE id_configuracion = 1;
+END;
+$$;
+
+CREATE TRIGGER trg_auditar_configuracion_sistema
+AFTER INSERT OR UPDATE ON configuracion_sistema
+FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambio();
+
+
+----------------------------------------
+
+
+
+
+ALTER TABLE configuracion_sistema ADD COLUMN IF NOT EXISTS categoria VARCHAR(150) NOT NULL DEFAULT 'Soporte Técnico · Internet ISP';
+ALTER TABLE configuracion_sistema ADD COLUMN IF NOT EXISTS eslogan VARCHAR(300) NOT NULL DEFAULT 'Del primer reporte a la solución confirmada, sin perder el hilo de ningún ticket.';
+
+CREATE OR REPLACE FUNCTION fn_todas_ordenado_admin()
+RETURNS SETOF solicitud
+LANGUAGE sql STABLE
+AS $$
+    SELECT s.* FROM solicitud s
+    ORDER BY s.id_prioridad DESC NULLS FIRST, s.fecha_creacion ASC;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_todas_ordenado_admin_conteo()
+RETURNS BIGINT
+LANGUAGE sql STABLE
+AS $$
+    SELECT count(*) FROM solicitud;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_por_estado_ordenado_admin(p_estado VARCHAR)
+RETURNS SETOF solicitud
+LANGUAGE sql STABLE
+AS $$
+    SELECT s.* FROM solicitud s
+    LEFT JOIN estado e ON e.id_estado = s.id_estado
+    WHERE e.nombre_estado = p_estado
+    ORDER BY s.id_prioridad DESC NULLS FIRST, s.fecha_creacion ASC;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_por_estado_ordenado_admin_conteo(p_estado VARCHAR)
+RETURNS BIGINT
+LANGUAGE sql STABLE
+AS $$
+    SELECT count(*) FROM solicitud s
+    LEFT JOIN estado e ON e.id_estado = s.id_estado
+    WHERE e.nombre_estado = p_estado;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_mis_tareas(p_id_tecnico BIGINT, p_estado VARCHAR)
+RETURNS SETOF solicitud
+LANGUAGE sql STABLE
+AS $$
+    SELECT s.* FROM (
+        SELECT a.id_solicitud FROM asignacion_solicitud a
+        WHERE a.id_tecnico = p_id_tecnico AND a.vigente = true
+        UNION
+        SELECT a.id_solicitud FROM asignacion_solicitud a
+        JOIN tecnico_grupo tg ON tg.id_grupo = a.id_grupo AND tg.id_usuario = p_id_tecnico
+        WHERE a.vigente = true
+    ) mis_asignaciones
+    JOIN solicitud s ON s.id_solicitud = mis_asignaciones.id_solicitud
+    LEFT JOIN prioridad p ON p.id_prioridad = s.id_prioridad
+    LEFT JOIN estado e ON e.id_estado = s.id_estado
+    WHERE (p_estado IS NULL OR e.nombre_estado = p_estado)
+    ORDER BY COALESCE(p.orden, 0) DESC, s.fecha_creacion ASC;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_mis_tareas_conteo(p_id_tecnico BIGINT, p_estado VARCHAR)
+RETURNS BIGINT
+LANGUAGE sql STABLE
+AS $$
+    SELECT count(*) FROM (
+        SELECT a.id_solicitud FROM asignacion_solicitud a
+        WHERE a.id_tecnico = p_id_tecnico AND a.vigente = true
+        UNION
+        SELECT a.id_solicitud FROM asignacion_solicitud a
+        JOIN tecnico_grupo tg ON tg.id_grupo = a.id_grupo AND tg.id_usuario = p_id_tecnico
+        WHERE a.vigente = true
+    ) mis_asignaciones
+    JOIN solicitud s ON s.id_solicitud = mis_asignaciones.id_solicitud
+    LEFT JOIN estado e ON e.id_estado = s.id_estado
+    WHERE (p_estado IS NULL OR e.nombre_estado = p_estado);
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_estado_cliente(p_id_cliente BIGINT)
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT e.nombre_estado, count(s.id_solicitud)
+    FROM estado e
+    LEFT JOIN solicitud s ON s.id_estado = e.id_estado AND s.id_cliente = p_id_cliente
+    GROUP BY e.id_estado, e.nombre_estado
+    ORDER BY e.id_estado;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_categoria_cliente(p_id_cliente BIGINT)
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT COALESCE(c.nombre_categoria, 'Sin categoría'::varchar), count(*)
+    FROM solicitud s
+    LEFT JOIN categoria c ON c.id_categoria = s.id_categoria
+    WHERE s.id_cliente = p_id_cliente
+    GROUP BY COALESCE(c.nombre_categoria, 'Sin categoría'::varchar)
+    ORDER BY 2 DESC;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_prioridad_tecnico(p_id_tecnico BIGINT)
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT p.nombre_prioridad, count(s.id_solicitud)
+    FROM prioridad p
+    LEFT JOIN solicitud s ON s.id_prioridad = p.id_prioridad
+        AND s.id_solicitud IN (
+            SELECT a.id_solicitud FROM asignacion_solicitud a
+            WHERE a.id_tecnico = p_id_tecnico AND a.vigente = true
+            UNION
+            SELECT a.id_solicitud FROM asignacion_solicitud a
+            JOIN tecnico_grupo tg ON tg.id_grupo = a.id_grupo AND tg.id_usuario = p_id_tecnico
+            WHERE a.vigente = true
+        )
+    GROUP BY p.id_prioridad, p.nombre_prioridad
+    ORDER BY p.orden;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_estado()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT e.nombre_estado, count(s.id_solicitud)
+    FROM estado e
+    LEFT JOIN solicitud s ON s.id_estado = e.id_estado
+    GROUP BY e.id_estado, e.nombre_estado
+    ORDER BY e.id_estado;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_prioridad()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT etiqueta, valor FROM (
+        SELECT p.orden AS orden_fila, p.nombre_prioridad AS etiqueta, count(s.id_solicitud) AS valor
+        FROM prioridad p
+        LEFT JOIN solicitud s ON s.id_prioridad = p.id_prioridad
+        GROUP BY p.id_prioridad, p.nombre_prioridad, p.orden
+        UNION ALL
+        SELECT -1, 'Sin asignar'::varchar, count(*) FROM solicitud WHERE id_prioridad IS NULL
+    ) t ORDER BY orden_fila;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_solicitudes_categoria()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT etiqueta, valor FROM (
+        SELECT c.nombre_categoria AS etiqueta, count(s.id_solicitud) AS valor
+        FROM categoria c
+        LEFT JOIN solicitud s ON s.id_categoria = c.id_categoria
+        GROUP BY c.id_categoria, c.nombre_categoria
+        UNION ALL
+        SELECT 'Sin categoría'::varchar, count(*) FROM solicitud WHERE id_categoria IS NULL
+    ) t ORDER BY valor DESC;
+$$;
+
+-- ---------- ReporteSolicitudRepository ----------
+
+CREATE OR REPLACE FUNCTION fn_conteo_aprobacion_tecnico(p_id_tecnico BIGINT)
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT v.etiqueta, count(r.id_reporte)
+    FROM (VALUES ('aprobado','Aprobados'), ('rechazado','Rechazados')) AS v(clave, etiqueta)
+    LEFT JOIN reporte_solicitud r ON r.estado_aprobacion::text = v.clave AND r.id_tecnico = p_id_tecnico
+    GROUP BY v.etiqueta, v.clave
+    ORDER BY v.clave;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_aprobacion()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT v.etiqueta, count(r.id_reporte)
+    FROM (VALUES ('aprobado','Aprobados'), ('rechazado','Rechazados')) AS v(clave, etiqueta)
+    LEFT JOIN reporte_solicitud r ON r.estado_aprobacion::text = v.clave
+    GROUP BY v.etiqueta, v.clave
+    ORDER BY v.clave;
+$$;
+
+-- ---------- TecnicoRepository ----------
+
+CREATE OR REPLACE FUNCTION fn_conteo_tecnicos_nivel()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT v.etiqueta, count(t.id_usuario)
+    FROM (VALUES ('junior','Junior'), ('intermedio','Intermedio'), ('senior','Senior')) AS v(clave, etiqueta)
+    LEFT JOIN tecnico t ON t.nivel::text = v.clave
+    GROUP BY v.etiqueta, v.clave
+    ORDER BY v.clave;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_conteo_carga_trabajo_tecnicos()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT etiqueta, count(*) FROM (
+        SELECT
+            CASE
+                WHEN carga.total IS NULL OR carga.total = 0 THEN 1
+                WHEN carga.total <= 2 THEN 2
+                WHEN carga.total <= 5 THEN 3
+                ELSE 4
+            END AS orden_fila,
+            CASE
+                WHEN carga.total IS NULL OR carga.total = 0 THEN 'Libre'
+                WHEN carga.total <= 2 THEN 'Carga baja'
+                WHEN carga.total <= 5 THEN 'Carga media'
+                ELSE 'Sobrecargado'
+            END AS etiqueta
+        FROM tecnico t
+        LEFT JOIN (
+            SELECT id_tecnico, count(*) AS total FROM asignacion_solicitud
+            WHERE vigente = true AND id_tecnico IS NOT NULL
+            GROUP BY id_tecnico
+        ) carga ON carga.id_tecnico = t.id_usuario
+        WHERE t.habilitado = true
+    ) clasificados
+    GROUP BY orden_fila, etiqueta
+    ORDER BY orden_fila;
+$$;
+
+-- ---------- UsuarioRepository ----------
+
+CREATE OR REPLACE FUNCTION fn_conteo_usuarios_rol()
+RETURNS TABLE(etiqueta VARCHAR, valor BIGINT)
+LANGUAGE sql STABLE
+AS $$
+    SELECT v.etiqueta, count(u.id_usuario)
+    FROM (VALUES ('cliente','Clientes'), ('tecnico','Técnicos'), ('administrador','Administradores'), ('superusuario','Superusuarios')) AS v(clave, etiqueta)
+    LEFT JOIN usuario u ON u.rol::text = v.clave
+    GROUP BY v.etiqueta, v.clave
+    ORDER BY v.clave;
+$$;
+
+-- ---------- AdjuntoRepository ----------
+
+CREATE OR REPLACE FUNCTION fn_puede_acceder_a_solicitud(p_id_solicitud BIGINT, p_id_usuario BIGINT)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM solicitud WHERE id_solicitud = p_id_solicitud AND id_cliente = p_id_usuario
+        UNION ALL
+        SELECT 1 FROM asignacion_solicitud WHERE id_solicitud = p_id_solicitud AND vigente = true AND id_tecnico = p_id_usuario
+        UNION ALL
+        SELECT 1 FROM asignacion_solicitud a JOIN tecnico_grupo tg ON tg.id_grupo = a.id_grupo
+        WHERE a.id_solicitud = p_id_solicitud AND a.vigente = true AND tg.id_usuario = p_id_usuario
+    );
+$$;
+
+-- ---------- GrupoTecnicoRepository (eran escrituras, van como sp_) ----------
+
+CREATE OR REPLACE FUNCTION sp_agregar_miembro_grupo(p_id_tecnico BIGINT, p_id_grupo BIGINT)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+    INSERT INTO tecnico_grupo (id_usuario, id_grupo) VALUES (p_id_tecnico, p_id_grupo);
+$$;
+
+CREATE OR REPLACE FUNCTION sp_quitar_miembro_grupo(p_id_tecnico BIGINT, p_id_grupo BIGINT)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+    DELETE FROM tecnico_grupo WHERE id_usuario = p_id_tecnico AND id_grupo = p_id_grupo;
+$$;
+
 
 
 

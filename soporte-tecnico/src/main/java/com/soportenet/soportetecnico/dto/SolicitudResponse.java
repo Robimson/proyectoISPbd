@@ -14,9 +14,12 @@ public class SolicitudResponse {
     private final String prioridad;
     private final Integer version;
     private final String direccion;
+    private final Double lat;
+    private final Double lng;
 
     public SolicitudResponse(Long idSolicitud, String descripcion, OffsetDateTime fechaCreacion,
-                              String estado, String prioridad, Integer version, String direccion) {
+                             String estado, String prioridad, Integer version, String direccion,
+                             Double lat, Double lng) {
         this.idSolicitud = idSolicitud;
         this.descripcion = descripcion;
         this.fechaCreacion = fechaCreacion;
@@ -24,6 +27,8 @@ public class SolicitudResponse {
         this.prioridad = prioridad;
         this.version = version;
         this.direccion = direccion;
+        this.lat = lat;
+        this.lng = lng;
     }
 
     public static SolicitudResponse fromEntity(Solicitud s) {
@@ -34,7 +39,9 @@ public class SolicitudResponse {
                 s.getEstado() != null ? s.getEstado().getNombreEstado() : null,
                 s.getPrioridad() != null ? s.getPrioridad().getNombrePrioridad() : null,
                 s.getVersion(),
-                s.getDireccion()
+                s.getDireccion(),
+                s.getLat(),
+                s.getLng()
         );
     }
 
@@ -64,5 +71,13 @@ public class SolicitudResponse {
 
     public String getDireccion() {
         return direccion;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public Double getLng() {
+        return lng;
     }
 }
