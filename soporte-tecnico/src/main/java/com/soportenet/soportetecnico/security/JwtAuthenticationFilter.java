@@ -33,24 +33,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                     HttpServletResponse response,
-                                     FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
+            throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
+
             String token = header.substring("Bearer ".length());
 
             try {
                 Claims claims = jwtService.validarYObtenerClaims(token);
+
                 String idUsuario = claims.getSubject();
                 String rol = claims.get("rol", String.class);
 
-                var authority = new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase());
-                var authentication = new UsernamePasswordAuthenticationToken(idUsuario, null, List.of(authority));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                var authority = new SimpleGrantedAuthority(
+                        "ROLE_" + rol.toUpperCase()
+                );
+
+                // DEBUG TEMPORAL: comprobar rol del JWT
+                System.out.println(
+                        "JWT rol claim=" + rol +
+                                " -> authority=" + authority.getAuthority()
+                );
+
+                var authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                idUsuario,
+                                null,
+                                List.of(authority)
+                        );
+
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(authentication);
+
             } catch (JwtException | IllegalArgumentException ex) {
+
                 SecurityContextHolder.clearContext();
             }
         }

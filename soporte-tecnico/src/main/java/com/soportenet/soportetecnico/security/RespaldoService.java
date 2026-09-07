@@ -170,7 +170,7 @@ public class RespaldoService {
 
             comprimirCarpeta(destino, zipFinal);
 
-          //  eliminarCarpetaRecursivo(destino);
+            //  eliminarCarpetaRecursivo(destino);
 
             respaldo.setRutaArchivo(
                     zipFinal.toAbsolutePath().toString()
@@ -296,10 +296,13 @@ public class RespaldoService {
             return;
         }
 
-        LocalDate hoy = LocalDate.now();
+        boolean esPrueba =
+                "PRUEBA".equalsIgnoreCase(config.getFrecuencia());
 
         if ("SEMANAL".equalsIgnoreCase(
                 config.getFrecuencia())) {
+
+            LocalDate hoy = LocalDate.now();
 
             int diaHoy =
                     hoy.getDayOfWeek().getValue() % 7;
@@ -311,21 +314,27 @@ public class RespaldoService {
             }
         }
 
-        OffsetDateTime desdeMedianoche =
-                hoy.atStartOfDay(
-                        ZoneId.systemDefault()
-                ).toOffsetDateTime();
+        // En modo PRUEBA nos saltamos el chequeo de "ya ejecutado hoy"
+        if (!esPrueba) {
 
-        boolean yaEjecutadoHoy =
-                respaldoRepository
-                        .existsByTipoAndEstadoAndFechaInicioAfter(
-                                TipoRespaldo.FULL,
-                                EstadoRespaldo.COMPLETADO,
-                                desdeMedianoche
-                        );
+            LocalDate hoy = LocalDate.now();
 
-        if (yaEjecutadoHoy) {
-            return;
+            OffsetDateTime desdeMedianoche =
+                    hoy.atStartOfDay(
+                            ZoneId.systemDefault()
+                    ).toOffsetDateTime();
+
+            boolean yaEjecutadoHoy =
+                    respaldoRepository
+                            .existsByTipoAndEstadoAndFechaInicioAfter(
+                                    TipoRespaldo.FULL,
+                                    EstadoRespaldo.COMPLETADO,
+                                    desdeMedianoche
+                            );
+
+            if (yaEjecutadoHoy) {
+                return;
+            }
         }
 
         iniciarRespaldoFullAsync(
