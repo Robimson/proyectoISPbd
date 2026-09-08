@@ -52,7 +52,7 @@
         }
     }
 
-    const abrirAdjuntos = activarPanelAdjuntos({
+    /*const abrirAdjuntos = activarPanelAdjuntos({
         idPanel: 'panel-adjuntos',
         idSpanSolicitud: 'id-solicitud-adjuntos',
         idMensajeError: 'mensaje-error-adjuntos',
@@ -61,12 +61,24 @@
         idInputArchivo: 'archivo-adjunto',
         idBtnSubir: 'btn-subir-adjunto',
         idBtnCerrar: 'btn-cerrar-adjuntos'
+    });*/
+
+    const abrirAdjuntos = activarPanelAdjuntos({
+        idPanel: 'panel-adjuntos',
+        idSpanSolicitud: 'id-solicitud-adjuntos',
+        idMensajeError: 'mensaje-error-adjuntos',
+        idLista: 'lista-adjuntos',
+        idForm: 'form-adjuntos',
+        idInputArchivo: 'archivo-adjunto',
+        idBtnSubir: 'btn-subir-adjunto',
+        idBtnCerrar: 'btn-cerrar-adjuntos',
+        soloLectura: true
     });
 
     function filaSolicitud(s) {
         const claseBadge = claseBadgeEstado(s.estado);
         let acciones = '<button data-id="' + s.idSolicitud + '" class="btn-ver-detalle secundario btn-compacto">Ver detalles</button>';
-        if (s.estado !== 'Cerrada') {
+        if (s.estado === 'En Proceso') {
             acciones += ' <button data-id="' + s.idSolicitud + '" class="btn-adjuntos secundario btn-compacto">Adjuntos</button>';
         }
         if (s.estado === 'En Proceso') {
@@ -230,7 +242,7 @@
         panelReportar.classList.add('oculto');
     });
 
-    formReportar.addEventListener('submit', async function (evento) {
+    /*formReportar.addEventListener('submit', async function (evento) {
         evento.preventDefault();
         ocultarMensaje(mensajeErrorReportar);
 
@@ -273,7 +285,63 @@
             btnEnviar.disabled = false;
             btnEnviar.textContent = 'Enviar reporte';
         }
+    }); */
+
+
+    formReportar.addEventListener('submit', async function (evento) {
+        evento.preventDefault();
+        ocultarMensaje(mensajeErrorReportar);
+
+        const btnEnviar = document.getElementById('btn-enviar-reporte');
+        btnEnviar.disabled = true;
+
+        try {
+            const idSolicitud = formReportar.dataset.idSolicitud;
+            const detalleReporte = document.getElementById('detalle-reporte').value.trim();
+            const archivos = archivosReporte;
+
+            // Los adjuntos se suben ANTES de enviar el reporte a proposito:
+            // sp_agregar_adjunto solo permite al tecnico subir evidencia
+            // mientras la solicitud sigue En Proceso, y enviar el reporte es
+            // justamente lo que la pasa a Pendiente Aprobacion. Si se subieran
+            // despues (como antes), ya llegarian tarde y la funcion los
+            // rechazaria.
+            if (archivos.length) {
+                btnEnviar.textContent = 'Subiendo evidencia...';
+                const resultados = await Promise.allSettled(
+                    archivos.map(function (archivo) { return subirAdjunto(idSolicitud, archivo); })
+                );
+                const fallidos = resultados.filter(function (r) { return r.status === 'rejected'; });
+                if (fallidos.length) {
+                    mostrarError(mensajeErrorReportar, new Error(
+                        fallidos.length + ' archivo(s) no se pudieron subir. Revisá el tamaño/formato y volvé a intentar antes de enviar el reporte.'
+                    ));
+                    btnEnviar.disabled = false;
+                    btnEnviar.textContent = 'Enviar reporte';
+                    return;
+                }
+            }
+
+            btnEnviar.textContent = 'Enviando...';
+            await apiFetch('/api/solicitudes/' + idSolicitud + '/reportes', {
+                method: 'POST',
+                body: JSON.stringify({ detalleReporte: detalleReporte })
+            });
+
+            panelReportar.classList.add('oculto');
+            cargarMisTareas();
+            mostrarToast('Reporte enviado correctamente.', 'exito');
+        } catch (error) {
+            mostrarError(mensajeErrorReportar, error);
+        } finally {
+            btnEnviar.disabled = false;
+            btnEnviar.textContent = 'Enviar reporte';
+        }
     });
+
+
+
+
 
     filtroEstado.addEventListener('change', function () {
         paginaActual = 0;

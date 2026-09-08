@@ -616,6 +616,17 @@ async function subirAdjunto(idSolicitud, archivo) {
 }
 
 
+/*function activarPanelAdjuntos(config) {
+    const panel = document.getElementById(config.idPanel);
+    const idSolicitudSpan = document.getElementById(config.idSpanSolicitud);
+    const mensajeError = document.getElementById(config.idMensajeError);
+    const listaDiv = document.getElementById(config.idLista);
+    const form = document.getElementById(config.idForm);
+    const inputArchivo = document.getElementById(config.idInputArchivo);
+    const btnSubir = document.getElementById(config.idBtnSubir);
+
+    let idSolicitudActual = null;*/
+
 function activarPanelAdjuntos(config) {
     const panel = document.getElementById(config.idPanel);
     const idSolicitudSpan = document.getElementById(config.idSpanSolicitud);
@@ -624,6 +635,20 @@ function activarPanelAdjuntos(config) {
     const form = document.getElementById(config.idForm);
     const inputArchivo = document.getElementById(config.idInputArchivo);
     const btnSubir = document.getElementById(config.idBtnSubir);
+
+    // Modo solo-lectura: el tecnico ya no sube evidencia desde este panel -
+    // la sube al momento de "Reportar solucion" (mientras la solicitud
+    // sigue En Proceso, ver tecnico.js). El formulario de subida ni
+    // siquiera se muestra, sin importar el estado de la solicitud. El
+    // cliente sigue usando este mismo panel sin esta opcion, tal cual antes.
+    const soloLectura = config.soloLectura === true;
+    if (soloLectura) {
+        if (inputArchivo) {
+            const contenedorInput = inputArchivo.closest('.campo') || inputArchivo.parentElement;
+            if (contenedorInput) contenedorInput.classList.add('oculto');
+        }
+        if (btnSubir) btnSubir.classList.add('oculto');
+    }
 
     let idSolicitudActual = null;
 
