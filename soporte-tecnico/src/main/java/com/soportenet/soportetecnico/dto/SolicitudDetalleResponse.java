@@ -6,7 +6,6 @@ import com.soportenet.soportetecnico.entity.Solicitud;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-
 public class SolicitudDetalleResponse {
 
     private final Long idSolicitud;
@@ -34,15 +33,35 @@ public class SolicitudDetalleResponse {
 
     private final List<ReporteResponse> reportes;
 
-    public SolicitudDetalleResponse(Long idSolicitud, String descripcion, String direccion, Double lat, Double lng,
-                                     String categoria,
-                                     OffsetDateTime fechaCreacion, String estado, String prioridad,
-                                     OffsetDateTime fechaLimiteConfirmacion, Integer version,
-                                     String clienteNombre, String clienteCorreo, String clienteEstadoPago,
-                                     String tecnicoAsignadoNombre, String tecnicoAsignadoCorreo,
-                                     String grupoAsignadoNombre, OffsetDateTime fechaAsignacion,
-                                     Boolean esReasignacion, String motivoReasignacion,
-                                     List<ReporteResponse> reportes) {
+    // NUEVOS CAMPOS
+    private final Long idCliente;
+    private final Long idTecnicoAsignado;
+
+    public SolicitudDetalleResponse(
+            Long idSolicitud,
+            String descripcion,
+            String direccion,
+            Double lat,
+            Double lng,
+            String categoria,
+            OffsetDateTime fechaCreacion,
+            String estado,
+            String prioridad,
+            OffsetDateTime fechaLimiteConfirmacion,
+            Integer version,
+            String clienteNombre,
+            String clienteCorreo,
+            String clienteEstadoPago,
+            String tecnicoAsignadoNombre,
+            String tecnicoAsignadoCorreo,
+            String grupoAsignadoNombre,
+            OffsetDateTime fechaAsignacion,
+            Boolean esReasignacion,
+            String motivoReasignacion,
+            List<ReporteResponse> reportes,
+            Long idCliente,
+            Long idTecnicoAsignado) {
+
         this.idSolicitud = idSolicitud;
         this.descripcion = descripcion;
         this.direccion = direccion;
@@ -64,13 +83,24 @@ public class SolicitudDetalleResponse {
         this.esReasignacion = esReasignacion;
         this.motivoReasignacion = motivoReasignacion;
         this.reportes = reportes;
+
+        // NUEVAS ASIGNACIONES
+        this.idCliente = idCliente;
+        this.idTecnicoAsignado = idTecnicoAsignado;
     }
 
-  
-    public static SolicitudDetalleResponse construir(Solicitud s, AsignacionSolicitud asignacionVigente,
-                                                       List<ReporteResponse> reportes) {
-        boolean tieneTecnico = asignacionVigente != null && asignacionVigente.getTecnico() != null;
-        boolean tieneGrupo = asignacionVigente != null && asignacionVigente.getGrupo() != null;
+    public static SolicitudDetalleResponse construir(
+            Solicitud s,
+            AsignacionSolicitud asignacionVigente,
+            List<ReporteResponse> reportes) {
+
+        boolean tieneTecnico =
+                asignacionVigente != null
+                        && asignacionVigente.getTecnico() != null;
+
+        boolean tieneGrupo =
+                asignacionVigente != null
+                        && asignacionVigente.getGrupo() != null;
 
         return new SolicitudDetalleResponse(
                 s.getIdSolicitud(),
@@ -78,27 +108,78 @@ public class SolicitudDetalleResponse {
                 s.getDireccion(),
                 s.getLat(),
                 s.getLng(),
-                s.getCategoria() != null ? s.getCategoria().getNombreCategoria() : null,
+
+                s.getCategoria() != null
+                        ? s.getCategoria().getNombreCategoria()
+                        : null,
+
                 s.getFechaCreacion(),
-                s.getEstado() != null ? s.getEstado().getNombreEstado() : null,
-                s.getPrioridad() != null ? s.getPrioridad().getNombrePrioridad() : null,
+
+                s.getEstado() != null
+                        ? s.getEstado().getNombreEstado()
+                        : null,
+
+                s.getPrioridad() != null
+                        ? s.getPrioridad().getNombrePrioridad()
+                        : null,
+
                 s.getFechaLimiteConfirmacion(),
                 s.getVersion(),
-                (s.getCliente() != null && s.getCliente().getUsuario() != null)
-                        ? s.getCliente().getUsuario().getNombreUsuario() : null,
-                (s.getCliente() != null && s.getCliente().getUsuario() != null)
-                        ? s.getCliente().getUsuario().getCorreo() : null,
-                (s.getCliente() != null && s.getCliente().getEstadoPago() != null)
-                        ? s.getCliente().getEstadoPago().name() : null,
-                (tieneTecnico && asignacionVigente.getTecnico().getUsuario() != null)
-                        ? asignacionVigente.getTecnico().getUsuario().getNombreUsuario() : null,
-                (tieneTecnico && asignacionVigente.getTecnico().getUsuario() != null)
-                        ? asignacionVigente.getTecnico().getUsuario().getCorreo() : null,
-                tieneGrupo ? asignacionVigente.getGrupo().getNombreGrupo() : null,
-                asignacionVigente != null ? asignacionVigente.getFechaAsignacion() : null,
-                asignacionVigente != null ? asignacionVigente.getEsReasignacion() : null,
-                asignacionVigente != null ? asignacionVigente.getMotivoReasignacion() : null,
-                reportes
+
+                (s.getCliente() != null
+                        && s.getCliente().getUsuario() != null)
+                        ? s.getCliente().getUsuario().getNombreUsuario()
+                        : null,
+
+                (s.getCliente() != null
+                        && s.getCliente().getUsuario() != null)
+                        ? s.getCliente().getUsuario().getCorreo()
+                        : null,
+
+                (s.getCliente() != null
+                        && s.getCliente().getEstadoPago() != null)
+                        ? s.getCliente().getEstadoPago().name()
+                        : null,
+
+                (tieneTecnico
+                        && asignacionVigente.getTecnico().getUsuario() != null)
+                        ? asignacionVigente.getTecnico().getUsuario().getNombreUsuario()
+                        : null,
+
+                (tieneTecnico
+                        && asignacionVigente.getTecnico().getUsuario() != null)
+                        ? asignacionVigente.getTecnico().getUsuario().getCorreo()
+                        : null,
+
+                tieneGrupo
+                        ? asignacionVigente.getGrupo().getNombreGrupo()
+                        : null,
+
+                asignacionVigente != null
+                        ? asignacionVigente.getFechaAsignacion()
+                        : null,
+
+                asignacionVigente != null
+                        ? asignacionVigente.getEsReasignacion()
+                        : null,
+
+                asignacionVigente != null
+                        ? asignacionVigente.getMotivoReasignacion()
+                        : null,
+
+                reportes,
+
+                // NUEVO: ID DEL CLIENTE
+                (s.getCliente() != null
+                        && s.getCliente().getUsuario() != null)
+                        ? s.getCliente().getUsuario().getIdUsuario()
+                        : null,
+
+                // NUEVO: ID DEL TECNICO ASIGNADO
+                (tieneTecnico
+                        && asignacionVigente.getTecnico().getUsuario() != null)
+                        ? asignacionVigente.getTecnico().getUsuario().getIdUsuario()
+                        : null
         );
     }
 
@@ -184,5 +265,15 @@ public class SolicitudDetalleResponse {
 
     public List<ReporteResponse> getReportes() {
         return reportes;
+    }
+
+    // NUEVOS GETTERS
+
+    public Long getIdCliente() {
+        return idCliente;
+    }
+
+    public Long getIdTecnicoAsignado() {
+        return idTecnicoAsignado;
     }
 }

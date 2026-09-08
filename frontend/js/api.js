@@ -740,7 +740,7 @@ function iconoParaTipoAdjunto(tipo) {
 }
 
 
-async function cargarListaAdjuntos(idSolicitud, contenedor) {
+/*async function cargarListaAdjuntos(idSolicitud, contenedor) {
     const adjuntos = await apiFetch('/api/solicitudes/' + idSolicitud + '/adjuntos');
 
     contenedor.innerHTML = adjuntos.length
@@ -751,6 +751,43 @@ async function cargarListaAdjuntos(idSolicitud, contenedor) {
                 '</div>';
         }).join('')
         : '<div class="vacio">No hay evidencias adjuntas.</div>';
+
+    contenedor.querySelectorAll('.btn-ver-evidencia').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            abrirVisorArchivo(
+                '/api/adjuntos/' + boton.getAttribute('data-id') + '/archivo',
+                boton.getAttribute('data-nombre'),
+                boton.getAttribute('data-tipo')
+            );
+        });
+    });
+}*/
+
+
+
+function filaAdjunto(a) {
+    return '<div class="fila-miembro-grupo">' +
+        '<span>' + iconoParaTipoAdjunto(a.tipoArchivo) + ' <strong>' + escaparHtml(a.nombreArchivo) + '</strong> · ' + escaparHtml(a.tipoArchivo || '') + '</span>' +
+        '<button type="button" class="btn-ver-evidencia secundario btn-compacto" data-id="' + a.idAdjunto + '" data-nombre="' + escaparHtml(a.nombreArchivo) + '" data-tipo="' + escaparHtml(a.tipoArchivo || '') + '">Ver</button>' +
+        '</div>';
+}
+
+async function cargarListaAdjuntos(idSolicitud, contenedor, idCliente, idTecnicoAsignado) {
+    const adjuntos = await apiFetch('/api/solicitudes/' + idSolicitud + '/adjuntos');
+
+    if (!adjuntos.length) {
+        contenedor.innerHTML = '<div class="vacio">No hay evidencias adjuntas.</div>';
+        return;
+    }
+
+    const delCliente = adjuntos.filter(function (a) { return a.idUsuarioSube === idCliente; });
+    const delTecnico = adjuntos.filter(function (a) { return a.idUsuarioSube !== idCliente; });
+
+    contenedor.innerHTML =
+        '<h5 style="margin-bottom:6px;">Del cliente</h5>' +
+        (delCliente.length ? delCliente.map(filaAdjunto).join('') : '<div class="vacio">Sin evidencias del cliente.</div>') +
+        '<h5 style="margin:14px 0 6px;">Del técnico</h5>' +
+        (delTecnico.length ? delTecnico.map(filaAdjunto).join('') : '<div class="vacio">Sin evidencias del técnico.</div>');
 
     contenedor.querySelectorAll('.btn-ver-evidencia').forEach(function (boton) {
         boton.addEventListener('click', function () {
@@ -865,8 +902,8 @@ async function abrirModalDetalleSolicitud(idSolicitud, opciones) {
 
             (opciones.extraHtml ? opciones.extraHtml(detalle) : '');
 
-        await cargarListaAdjuntos(idSolicitud, cuerpo.querySelector('#lista-evidencias-detalle'));
-
+        //await cargarListaAdjuntos(idSolicitud, cuerpo.querySelector('#lista-evidencias-detalle'));
+        await cargarListaAdjuntos(idSolicitud, cuerpo.querySelector('#lista-evidencias-detalle'), detalle.idCliente, detalle.idTecnicoAsignado);
         if (opciones.alRenderizar) {
             opciones.alRenderizar(cuerpo, detalle, cerrar);
         }

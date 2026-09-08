@@ -204,9 +204,9 @@
         });
         inputAdjuntosReporte.value = '';
 
-        if (archivosReporte.length > 5) {
-            mostrarError(mensajeErrorReportar, new Error('Podés adjuntar hasta 5 archivos - se ignoraron los que sobraban.'));
-            archivosReporte = archivosReporte.slice(0, 5);
+        if (archivosReporte.length > 20) {
+            mostrarError(mensajeErrorReportar, new Error('Podés adjuntar hasta 20 archivos - se ignoraron los que sobraban.'));
+            archivosReporte = archivosReporte.slice(0, 20);
         }
         renderizarAdjuntosReporte();
     });
