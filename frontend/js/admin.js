@@ -667,7 +667,7 @@
 
    
 
-    function filaAnuncio(a) {
+    /*function filaAnuncio(a) {
         const claseBadge = a.estaActivo ? 'badge-activo' : 'badge-inactivo';
         const textoBadge = a.estaActivo ? 'activo' : 'inactivo';
         const vence = a.fechaExpiracion ? formatearFecha(a.fechaExpiracion) : '—';
@@ -681,6 +681,28 @@
             '<td>' + formatearFecha(a.fechaCreacion) + '</td>' +
             '<td>' + vence + '</td>' +
             '<td><span class="badge ' + claseBadge + '">' + textoBadge + '</span></td>' +
+            '<td>' + accion + '</td>' +
+            '</tr>';
+    }*/
+
+
+    function filaAnuncio(a) {
+        const mapaBadgeAnuncio = { activo: 'badge-activo', vencido: 'badge-suspendido', inactivo: 'badge-inactivo' };
+        const claseBadge = mapaBadgeAnuncio[a.estado] || 'badge-inactivo';
+        const vence = a.fechaExpiracion ? formatearFecha(a.fechaExpiracion) : '—';
+        // El boton "Desactivar" se ofrece mientras el interruptor manual siga
+        // en true, incluso si ya aparece "vencido" por fecha - asi el admin
+        // puede formalizar la baja aunque ya haya dejado de mostrarse solo.
+        const accion = a.estaActivo
+            ? '<button class="btn-desactivar-anuncio secundario" data-id="' + a.idAnuncio + '">Desactivar</button>'
+            : '';
+
+        return '<tr>' +
+            '<td>#' + a.idAnuncio + '</td>' +
+            '<td><strong>' + escaparHtml(a.titulo) + '</strong><br><span style="color:var(--color-texto-suave);font-size:0.85rem;">' + escaparHtml(a.mensaje) + '</span></td>' +
+            '<td>' + formatearFecha(a.fechaCreacion) + '</td>' +
+            '<td>' + vence + '</td>' +
+            '<td><span class="badge ' + claseBadge + '">' + escaparHtml(a.estado) + '</span></td>' +
             '<td>' + accion + '</td>' +
             '</tr>';
     }
